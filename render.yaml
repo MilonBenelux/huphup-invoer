@@ -1,0 +1,36 @@
+# Render Blueprint: one web service + one Postgres database.
+# In Render: New → Blueprint → pick this repository.
+services:
+  - type: web
+    name: huphup-invoer
+    runtime: node
+    region: frankfurt
+    plan: starter
+    buildCommand: npm ci || npm install
+    startCommand: npm start
+    healthCheckPath: /api/public-config
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: huphup-invoer-db
+          property: connectionString
+      - key: TENANT_ID
+        sync: false        # Directory (tenant) ID — fill in during setup
+      - key: CLIENT_ID
+        sync: false        # Application (client) ID — fill in during setup
+      - key: DASHBOARD_URL
+        sync: false        # URL of the GHL agency dashboard, e.g. https://ghl-agency-dashboard-xxxx.onrender.com
+      - key: DASHBOARD_KEY
+        sync: false        # the dashboard's ACCESS_KEY (the club list comes from there)
+      - key: EXCLUDE_CLUBS
+        sync: false        # optional: sub-accounts that are not clubs, e.g. Fysioworld,huphup leeg
+      - key: ADMIN_EMAILS
+        sync: false        # e.g. karl.peeters@huphup.be
+      - key: EXTRA_FIELD_CLUBS
+        value: Zandhoven   # clubs whose name contains this get the Pelvi fields
+
+databases:
+  - name: huphup-invoer-db
+    region: frankfurt
+    plan: basic-256mb
+    databaseName: huphup_invoer

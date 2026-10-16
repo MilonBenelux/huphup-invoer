@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>HUPHUP Invoer</title>
+<link rel="preload" href="/fonts/huphup.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;800&display=swap">
+<style>
+@font-face{font-family:"huphup";src:url(/fonts/huphup.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+/* Layout: huphup.be look — purple header + hero, white body, grey band for picking the daypart, then the sheet.
+   Single light theme on purpose: the HUPHUP site is white. */
+:root{
+  color-scheme:light;
+  --purple:#7680ff; --purple-dark:#525cd6; --orange:#f98d3d; --green:#39c97d; --pink:#f8a3d2;
+  --ink:#161616; --grey:#808080; --band:#e6e6e6; --line:#ededee; --white:#ffffff; --err:#d63c2f; --err-soft:#fde7e4;
+  --f-brand:"huphup","Montserrat",Helvetica,Arial,sans-serif;
+  --f-body:"Montserrat",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{background:var(--white);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;margin:0}
+.inner{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* sliding square blocks, like the huphup.be preloader */
+.slides{position:fixed;inset:0;z-index:50;pointer-events:none}
+.slides i{position:absolute;inset:0;transform:translateX(0);transition:transform .6s cubic-bezier(.645,.045,.355,1)}
+.slides i:nth-child(1){background:var(--purple);transition-duration:.6s}
+.slides i:nth-child(2){background:var(--orange);transition-duration:.75s}
+.slides i:nth-child(3){background:var(--green);transition-duration:.9s}
+.slides.out i{transform:translateX(101%)}
+.slides.wipe i{transition:none;transform:translateX(-101%)}
+@media (prefers-reduced-motion:reduce){.slides{display:none}}
+
+/* header + hero */
+header.top{background:var(--purple);color:var(--white)}
+header.top .inner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px}
+.logo{font-family:var(--f-brand);font-size:26px;letter-spacing:.01em;color:var(--white);text-decoration:none}
+.user{display:flex;align-items:center;gap:8px;background:var(--purple-dark);border-radius:320px;padding:6px 14px;font-size:13px;font-weight:700}
+.user small{font-weight:500;opacity:.85}
+.hero{background:var(--purple);color:var(--white);text-align:center;padding-block:10px 48px;position:relative}
+.hero h1{font-family:var(--f-brand);font-weight:400;font-size:clamp(34px,6vw,58px);line-height:1.05;margin:0;text-wrap:balance;position:relative;display:inline-block}
+.hero h1 .spark{position:absolute;top:-28px;left:50%;width:46px;height:26px;transform:translateX(-50%)}
+.hero p{margin:12px auto 0;max-width:52ch;font-weight:500}
+.demo{display:inline-block;margin-top:14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;background:var(--white);color:var(--purple);border-radius:320px;padding:3px 10px}
+
+/* pill buttons like the site */
+.btn{font-family:var(--f-body);font-weight:700;font-size:15px;border:0;border-radius:320px;padding:12px 26px;cursor:pointer;color:var(--white);background:var(--orange);display:inline-flex;align-items:center;gap:8px;transition:transform .3s,background .3s}
+.btn:hover{transform:translateY(-2px)}
+.btn:disabled{background:var(--band);color:var(--grey);cursor:not-allowed;transform:none}
+.btn.primary{background:var(--purple)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+
+/* step 1: club + daypart, grey band like "Zoek een club" */
+.band{background:var(--band);padding-block:28px}
+.band .inner{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:20px 32px;align-items:start}
+.band h2,.sheet h2{font-family:var(--f-body);font-weight:700;font-size:22px;line-height:1.2;margin:0}
+.pick{display:grid;gap:16px;min-width:0}
+.lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--grey);margin-bottom:6px;display:block}
+select,input{font:inherit;color:var(--ink);background:var(--white);border:0;border-radius:320px;padding:11px 18px;min-width:0}
+#qClub{min-width:260px;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:14px;font-weight:700;border:2px solid var(--purple);background:var(--white);color:var(--purple);border-radius:320px;padding:7px 16px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--purple);color:var(--white)}
+.chip:disabled{border-color:var(--band);color:var(--grey);background:var(--white);cursor:default}
+.dateRow{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.seg{display:inline-flex;background:var(--white);border-radius:320px;padding:4px;gap:4px}
+.seg button{font:inherit;font-weight:700;border:0;border-radius:320px;background:transparent;color:var(--ink);padding:7px 20px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--orange);color:var(--white)}
+.seg button:disabled{color:#bbb;cursor:not-allowed}
+
+/* step 2: numbers, on white */
+.nums-wrap{padding-block:30px;display:grid;gap:22px}
+.nums{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:14px}
+.num{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
+.num .code{font-family:var(--f-brand);font-size:28px;line-height:1;color:var(--purple)}
+.num input{width:76px;text-align:center;font-weight:700;font-size:20px;font-variant-numeric:tabular-nums;border:2px solid var(--band);border-radius:16px;padding:8px 4px}
+.num input:focus{border-color:var(--purple);outline:none}
+.num.bad input{border-color:var(--err);background:var(--err-soft)}
+.num small{font-size:11px;line-height:1.25;color:var(--grey);font-weight:500;text-wrap:balance}
+.pelvi{background:var(--pink);border-radius:24px;padding:18px 20px;display:grid;gap:12px}
+.pelvi h3{margin:0;font-family:var(--f-brand);font-weight:400;font-size:26px;color:var(--white);line-height:1}
+.pelvi h3 span{font-family:var(--f-body);font-size:12px;font-weight:700;background:var(--white);color:var(--ink);border-radius:320px;padding:3px 10px;margin-left:8px;vertical-align:4px}
+.pelvi .num .code{color:var(--white)} .pelvi .num small{color:var(--ink)}
+.pelvi .num input{border-color:var(--white)}
+.save{display:flex;flex-wrap:wrap;align-items:center;gap:16px}
+.msg{margin:0;font-weight:700;font-size:14px}
+.msg.ok{color:var(--green)} .msg.err{color:var(--err)} .msg.warn{color:var(--orange)}
+
+/* step 3: the sheet */
+.sheet{padding-block:10px 56px;display:grid;gap:14px}
+.sheet-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px}
+.sheet-head p{margin:0;color:var(--grey);font-size:13px}
+.scroll{overflow-x:auto;border-radius:20px;border:2px solid var(--line)}
+table{border-collapse:collapse;width:100%;min-width:1080px;font-size:14px}
+th,td{border-bottom:1px solid var(--line);padding:0;text-align:left}
+thead th{background:var(--purple);color:var(--white);font-weight:700;padding:10px 10px;vertical-align:top;font-size:12px}
+thead th.n{text-align:center;width:60px;font-family:var(--f-brand);font-weight:400;font-size:20px;line-height:1}
+thead th.n small{display:block;font-family:var(--f-body);font-size:9.5px;font-weight:500;line-height:1.15;margin-top:3px;opacity:.9}
+thead th.x{background:var(--pink);color:var(--ink)}
+tbody tr:nth-child(even) td{background:#fafafb}
+td select,td input{border:0;border-radius:0;width:100%;background:transparent;padding:10px;font-weight:500}
+td input{text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+td select:focus,td input:focus{outline:3px solid var(--purple);outline-offset:-3px;background:#eef0ff}
+td.bad input{background:var(--err-soft);color:var(--err)}
+td.na{text-align:center;color:#c9c9c9}
+td.rn{width:40px;text-align:center;color:var(--grey);font-size:12px;font-weight:700}
+td.act{width:58px;text-align:center}
+.del{border:0;background:none;color:var(--grey);font:inherit;font-weight:700;cursor:pointer;padding:8px}
+.del:hover,.del.sure{color:var(--err)}
+.no-extra .xcol{display:none}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--grey)}
+
+@media (max-width:700px){
+  .band .inner{grid-template-columns:1fr}
+  #qClub{min-width:0;width:100%}
+  .user small{display:none}
+}
+
+[hidden]{display:none!important}
+.user button{font:inherit;font-weight:500;background:none;border:0;color:inherit;cursor:pointer;padding:0;opacity:.9;text-decoration:underline;text-underline-offset:3px}
+.gate{min-height:calc(100vh - 60px);display:grid;place-items:center;text-align:center;padding-block:40px}
+.gate .box{display:grid;gap:18px;justify-items:center;max-width:440px}
+.gate h1{font-family:var(--f-brand);font-weight:400;font-size:clamp(40px,8vw,64px);line-height:1;margin:0;color:var(--white)}
+.gate p{margin:0;font-weight:500;color:var(--white)}
+.gate .err{background:var(--white);color:var(--err);border-radius:16px;padding:8px 14px;font-weight:700}
+.ms svg{width:18px;height:18px}
+td.saving{opacity:.5}
+</style>
+</head>
+<body>
+<div class="slides" id="slides" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<header class="top"><div class="inner">
+  <a class="logo" href="#top">HUpHuP</a>
+  <div class="user" id="userBox" hidden><span id="me"></span> <small>· <button type="button" id="export" hidden>Export (CSV)</button> <button type="button" id="logout">Afmelden</button></small></div>
+</div></header>
+
+<section class="hero gate" id="gate" hidden><div class="inner box">
+  <h1>HUpHuP invoer</h1>
+  <p>Meld je aan met je HUPHUP-account of met het account waarmee je uitgenodigd bent.</p>
+  <button class="btn ms" id="login" type="button"><svg viewBox="0 0 21 21" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>Aanmelden met Microsoft</button>
+  <p class="err" id="gateMsg" role="status" hidden></p>
+</div></section>
+
+<main id="app" hidden>
+<section class="hero" id="top"><div class="inner">
+  <h1><svg class="spark" viewBox="0 0 46 26" aria-hidden="true"><g stroke="#f98d3d" stroke-width="4" stroke-linecap="round" fill="none"><path d="M23 4v16"/><path d="M8 9l7 11"/><path d="M38 9l-7 11"/></g></svg>hup, invullen maar!</h1>
+  <p>Kies je club en dagdeel, vul je cijfers in en klaar. Alles staat standaard op 0.</p>
+  </div></section>
+
+<section class="band" aria-labelledby="h1"><div class="inner">
+  <h2 id="h1">Waar en wanneer?</h2>
+  <div class="pick">
+    <div><label class="lbl" for="qClub">Club</label><select id="qClub"></select></div>
+    <div><span class="lbl">Snelkeuze</span><div class="chips" id="chips"></div></div>
+    <div class="dateRow">
+      <div><label class="lbl" for="qDate">Of kies een datum</label><input type="date" id="qDate"></div>
+      <div class="seg" role="group" aria-label="Dagdeel"><button type="button" id="bVM">VM</button><button type="button" id="bNM">NM</button></div>
+    </div>
+  </div>
+</div></section>
+
+<section class="inner nums-wrap" id="qFields" aria-label="Cijfers">
+  <div class="nums" id="qNums"></div>
+  <div class="pelvi" id="qExtra" hidden>
+    <h3>Pelvi <span>alleen Zandhoven</span></h3>
+    <div class="nums" id="qExtraNums"></div>
+  </div>
+  <div class="save">
+    <button class="btn" id="add" type="button">➡️ Opslaan</button>
+    <p class="msg" id="msg" role="status"></p>
+  </div>
+</section>
+
+<section class="inner sheet" aria-labelledby="h3">
+  <div class="sheet-head"><h2 id="h3">Jouw laatste 30 dagen</h2><p>Wijzigingen worden meteen bewaard · Enter = cel eronder</p></div>
+  <div class="scroll"><table id="grid"><thead><tr id="headRow"></tr></thead><tbody></tbody></table></div>
+  <div class="legend"><span>✓ = dagdeel al ingevuld (één invoer per dagdeel)</span><span>Velden: gehele getallen van 0 tot 99</span></div>
+</section>
+
+</main>
+
+<script src="/vendor/msal-browser.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

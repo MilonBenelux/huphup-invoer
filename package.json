@@ -1,0 +1,19 @@
+{
+  "name": "huphup-invoer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HUPHUP invoerscherm: club, dagdeel en resultaten, met Microsoft-aanmelding",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/dayparts.test.js"
+  },
+  "dependencies": {
+    "@azure/msal-browser": "^3.28.1",
+    "express": "^4.21.2",
+    "jose": "^5.9.6",
+    "pg": "^8.13.1"
+  }
+}
