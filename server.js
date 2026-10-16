@@ -186,6 +186,15 @@ app.use((err, req, res, next) => {
 });
 
 (async () => {
+  // Right after a (re)deploy the database may not accept connections yet: wait up to ~60 s.
+  for (let attempt = 1; ; attempt++) {
+    try { await pool.query('SELECT 1'); break; }
+    catch (e) {
+      if (attempt >= 12) throw e;
+      console.log(`Database not ready yet (${e.code || e.message}), retrying in 5 s…`);
+      await new Promise(r => setTimeout(r, 5000));
+    }
+  }
   await pool.query(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
   await pool.query('ALTER TABLE entries ADD COLUMN IF NOT EXISTS club_id TEXT'); // GHL LocationId of the club
   await clubs.init(pool);

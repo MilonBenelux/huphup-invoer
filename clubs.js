@@ -16,7 +16,10 @@ const exclude = new Set((process.env.EXCLUDE_CLUBS || '').split(',').map(s => s.
 
 let clubs = [];        // [{id, name}] sorted by name
 let loadedAt = null;
+let lastError = null;   // why the last fetch failed (shown in the log and to admins)
+let lastTry = 0;
 let pool = null;
+let retryTimer = null;
 
 const clean = list => list
   .filter(c => c && c.id && c.name && !exclude.has(c.name.toLowerCase()))
@@ -24,11 +27,11 @@ const clean = list => list
 
 async function fetchFromDashboard() {
   const { DASHBOARD_URL, DASHBOARD_KEY } = process.env;
-  if (!DASHBOARD_URL || !DASHBOARD_KEY) return null;
+  if (!DASHBOARD_URL || !DASHBOARD_KEY) throw new Error('DASHBOARD_URL or DASHBOARD_KEY is not set');
   const url = new URL('/clubs.json', DASHBOARD_URL);
   url.searchParams.set('key', DASHBOARD_KEY);
   const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
-  if (!res.ok) throw new Error(`dashboard answered HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`dashboard answered HTTP ${res.status}${res.status === 403 ? ' (wrong DASHBOARD_KEY)' : res.status === 404 ? ' (wrong DASHBOARD_URL, or /clubs.json not deployed on the dashboard yet)' : ''}`);
   const data = await res.json();
   if (!Array.isArray(data) || !data.length) throw new Error('dashboard returned no clubs');
   return clean(data.map(c => ({ id: String(c.id), name: String(c.name).trim() })));
@@ -46,17 +49,26 @@ async function saveToDb(list) {
 }
 
 async function refresh() {
+  lastTry = Date.now();
   try {
     const list = await fetchFromDashboard();
-    if (list) {
-      clubs = list; loadedAt = new Date();
-      await saveToDb(list);
-      console.log(`Club list: ${list.length} clubs from the GHL dashboard`);
-      return;
-    }
+    clubs = list; loadedAt = new Date(); lastError = null;
+    await saveToDb(list);
+    console.log(`Club list: ${list.length} clubs from the GHL dashboard`);
+    if (retryTimer) { clearInterval(retryTimer); retryTimer = null; }
+    return true;
   } catch (e) {
-    console.warn(`Club list: could not reach the GHL dashboard (${e.message}); keeping the last known list`);
+    lastError = e.name === 'TimeoutError' ? 'the dashboard did not answer in time (asleep?)' : e.message;
+    console.warn(`Club list: could not get it from the GHL dashboard: ${lastError}. Keeping the last known list (${clubs.length} clubs).`);
+    // Without any list, try again every 2 minutes instead of waiting for the hourly refresh.
+    if (!clubs.length && !retryTimer) retryTimer = setInterval(refresh, 2 * 60 * 1000);
+    return false;
   }
+}
+
+// Called before answering the page: if the list is still empty, try once more (at most every 30 s).
+async function ensure() {
+  if (!clubs.length && Date.now() - lastTry > 30 * 1000) await refresh();
 }
 
 async function init(pgPool) {
@@ -76,4 +88,4 @@ async function init(pgPool) {
 const list = () => clubs;
 const byName = name => clubs.find(c => c.name === name);
 
-module.exports = { init, list, byName, refresh, status: () => ({ count: clubs.length, loadedAt }) };
+module.exports = { init, list, byName, refresh, ensure, status: () => ({ count: clubs.length, loadedAt, error: lastError }) };
