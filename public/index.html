@@ -71,18 +71,20 @@ select,input{font:inherit;color:var(--ink);background:var(--white);border:0;bord
 
 /* step 2: numbers, on white */
 .nums-wrap{padding-block:30px;display:grid;gap:22px}
-.nums{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:14px}
-.num{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
-.num .code{font-family:var(--f-brand);font-size:28px;line-height:1;color:var(--purple)}
-.num input{width:76px;text-align:center;font-weight:700;font-size:20px;font-variant-numeric:tabular-nums;border:2px solid var(--band);border-radius:16px;padding:8px 4px}
+.nums{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:40px;row-gap:8px;max-width:760px}
+#qNums{grid-template-rows:repeat(5,auto);grid-auto-flow:column} /* fills top to bottom: L C A AM P | I IO R B F */
+.num{display:grid;grid-template-columns:44px 1fr 72px;grid-template-areas:"code label input";align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid var(--line)}
+.num .code{grid-area:code;font-family:var(--f-brand);font-size:26px;line-height:1;color:var(--purple);text-align:center}
+.num input{grid-area:input;width:72px;text-align:center;font-weight:700;font-size:20px;font-variant-numeric:tabular-nums;border:2px solid var(--band);border-radius:16px;padding:8px 4px}
 .num input:focus{border-color:var(--purple);outline:none}
 .num.bad input{border-color:var(--err);background:var(--err-soft)}
-.num small{font-size:11px;line-height:1.25;color:var(--grey);font-weight:500;text-wrap:balance}
+.num small{grid-area:label;font-size:14px;line-height:1.25;color:var(--ink);font-weight:500}
 .pelvi{background:var(--pink);border-radius:24px;padding:18px 20px;display:grid;gap:12px}
 .pelvi h3{margin:0;font-family:var(--f-brand);font-weight:400;font-size:26px;color:var(--white);line-height:1}
 .pelvi h3 span{font-family:var(--f-body);font-size:12px;font-weight:700;background:var(--white);color:var(--ink);border-radius:320px;padding:3px 10px;margin-left:8px;vertical-align:4px}
 .pelvi .num .code{color:var(--white)} .pelvi .num small{color:var(--ink)}
 .pelvi .num input{border-color:var(--white)}
+.pelvi .num{border-bottom-color:rgba(255,255,255,.5)}
 .save{display:flex;flex-wrap:wrap;align-items:center;gap:16px}
 .msg{margin:0;font-weight:700;font-size:14px}
 .msg.ok{color:var(--green)} .msg.err{color:var(--err)} .msg.warn{color:var(--orange)}
@@ -92,11 +94,14 @@ select,input{font:inherit;color:var(--ink);background:var(--white);border:0;bord
 .sheet-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px}
 .sheet-head p{margin:0;color:var(--grey);font-size:13px}
 .scroll{overflow-x:auto;border-radius:20px;border:2px solid var(--line)}
-table{border-collapse:collapse;width:100%;min-width:1080px;font-size:14px}
+table{border-collapse:collapse;width:100%;min-width:900px;font-size:14px}
 th,td{border-bottom:1px solid var(--line);padding:0;text-align:left}
 thead th{background:var(--purple);color:var(--white);font-weight:700;padding:10px 10px;vertical-align:top;font-size:12px}
-thead th.n{text-align:center;width:60px;font-family:var(--f-brand);font-weight:400;font-size:20px;line-height:1}
-thead th.n small{display:block;font-family:var(--f-body);font-size:9.5px;font-weight:500;line-height:1.15;margin-top:3px;opacity:.9}
+thead th.n{text-align:center;width:46px;padding:10px 2px;font-family:var(--f-brand);font-weight:400;font-size:20px;line-height:1;cursor:help}
+td.num-cell input{padding:10px 2px}
+td.col-club select{min-width:190px}
+td.col-part select{min-width:185px}
+th.col-part,td.col-part,th.col-club,td.col-club{white-space:nowrap}
 thead th.x{background:var(--pink);color:var(--ink)}
 tbody tr:nth-child(even) td{background:#fafafb}
 td select,td input{border:0;border-radius:0;width:100%;background:transparent;padding:10px;font-weight:500}
@@ -112,6 +117,7 @@ td.act{width:58px;text-align:center}
 .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--grey)}
 
 @media (max-width:700px){
+  .nums{grid-template-columns:1fr} #qNums{grid-template-rows:none;grid-auto-flow:row}
   .band .inner{grid-template-columns:1fr}
   #qClub{min-width:0;width:100%}
   .user small{display:none}

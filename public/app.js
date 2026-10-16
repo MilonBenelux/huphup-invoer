@@ -230,9 +230,9 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
     if (!rows.length) { tbody.innerHTML = `<tr><td colspan="${FIELDS.length + 4}" style="padding:28px;text-align:center;color:var(--grey)">Nog niets ingevuld. Hup, begin hierboven!</td></tr>`; return; }
     rows.forEach((r, i) => {
       const tr = document.createElement('tr'); tr.dataset.id = r.id;
-      tr.innerHTML = `<td class="rn">${i + 1}</td><td><select id="c-club-${i}" aria-label="Club rij ${i + 1}"></select></td><td><select id="c-part-${i}" aria-label="Dagdeel rij ${i + 1}"></select></td>` +
+      tr.innerHTML = `<td class="rn">${i + 1}</td><td class="col-club"><select id="c-club-${i}" aria-label="Club rij ${i + 1}"></select></td><td class="col-part"><select id="c-part-${i}" aria-label="Dagdeel rij ${i + 1}"></select></td>` +
         FIELDS.map(f => applies(f, r.club)
-          ? `<td${f.extra ? ' class="xcol"' : ''}><input id="c-${f.key}-${i}" data-r="${i}" data-f="${f.key}" inputmode="numeric" value="${r[f.key] ?? 0}" aria-label="${f.label} rij ${i + 1}"></td>`
+          ? `<td class="num-cell${f.extra ? ' xcol' : ''}" title="${f.label}"><input id="c-${f.key}-${i}" data-r="${i}" data-f="${f.key}" inputmode="numeric" value="${r[f.key] ?? 0}" aria-label="${f.label} rij ${i + 1}"></td>`
           : `<td class="na xcol" title="Alleen voor ${config.extraClubs.join(', ')}">–</td>`).join('') +
         `<td class="act"><button class="del" data-del="${i}" aria-label="Rij ${i + 1} verwijderen">✕</button></td>`;
       tbody.appendChild(tr);
@@ -304,8 +304,8 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
   }, 3 * 60 * 1000);
 
   // Grid header from the field list (codes, with the full name as a hint).
-  $('headRow').innerHTML = '<th></th><th>Club</th><th>Dagdeel</th>' +
-    FIELDS.map(f => `<th class="n${f.extra ? ' x xcol' : ''}" title="${f.label}">${f.key}<small>${f.label}</small></th>`).join('') + '<th></th>';
+  $('headRow').innerHTML = '<th></th><th class="col-club">Club</th><th class="col-part">Dagdeel</th>' +
+    FIELDS.map(f => `<th class="n${f.extra ? ' x xcol' : ''}" title="${f.key} = ${f.label}">${f.key}</th>`).join('') + '<th></th>';
 
   clubOptions(qClub); syncExtra(); syncQuick(); render();
   $('slides').classList.add('out'); // the coloured blocks slide away once the page is ready
