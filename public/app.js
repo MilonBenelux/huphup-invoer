@@ -63,6 +63,7 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
   try {
     [config, rows] = await Promise.all([api('GET', '/api/config'), api('GET', '/api/entries')]);
   } catch (e) { showGate(e.message); return; }
+  if (config.clubsError || !config.clubs.length) { showGate(config.clubsError || 'De clublijst is leeg.'); $('login').textContent = 'Opnieuw proberen'; $('login').onclick = () => location.reload(); return; }
   let PARTS = config.parts;
   const CLUBS = config.clubs;
   const FIELDS = config.fields;                       // [{key, label, extra}] in screen order

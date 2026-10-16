@@ -104,8 +104,10 @@ app.use(express.json({ limit: '20kb' }));
 // Settings the login page needs before anyone is signed in (nothing secret).
 app.get('/api/public-config', (req, res) => res.json({ tenantId: TENANT_ID, clientId: CLIENT_ID, scope: `api://${CLIENT_ID}/${API_SCOPE}` }));
 
-app.get('/api/config', auth, (req, res) => {
+app.get('/api/config', auth, async (req, res) => {
+  await clubs.ensure();
   res.json({
+    clubsError: clubs.list().length ? null : 'De clublijst kon niet geladen worden. Probeer het over enkele minuten opnieuw.',
     clubs: clubs.list().map(c => c.name),
     extraClubs: clubs.list().map(c => c.name).filter(isExtraClub),
     fields: FIELD_DEFS,

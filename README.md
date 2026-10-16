@@ -50,10 +50,9 @@ In the Entra admin centre, go to **App registrations → New registration**.
 ## 2. Entra: who may sign in
 
 1. **Open to the whole tenant.** Go to **Enterprise applications → HUPHUP invoer → Properties** and leave **Assignment required** on **No** (the default). Every member and invited guest of your tenant can then sign in without anyone approving them. (If you ever want to limit it, set it to Yes and assign a group under **Users and groups**.)
-2. *(no step: there is no group to assign)*
-3. **Invite guests.** For external people, use **Users → Invite external user**, or **Bulk invite** with a CSV. Add them to the group.
-4. **Check guest login.** Under **External Identities → All identity providers**, make sure **Email one-time passcode** is on.
-5. **Set default clubs.** Per user, fill in **Office location** with the exact club name as the dashboard shows it, for example `Hoogstraten`. This works for guests too.
+2. **Invite guests.** For external people, use **Users → Invite external user**, or **Bulk invite** with a CSV.
+3. **Check guest login.** Under **External Identities → All identity providers**, make sure **Email one-time passcode** is on.
+4. **Set default clubs.** Per user, fill in **Office location** with the exact club name as the dashboard shows it, for example `Hoogstraten`. This works for guests too.
 
 ## 3. Render
 
