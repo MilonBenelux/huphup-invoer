@@ -73,8 +73,8 @@ select,input{font:inherit;color:var(--ink);background:var(--white);border:0;bord
 .nums-wrap{padding-block:30px;display:grid;gap:22px}
 .nums{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:40px;row-gap:8px;max-width:760px}
 #qNums{grid-template-rows:repeat(5,auto);grid-auto-flow:column} /* fills top to bottom: L C A AM P | I IO R B F */
-.num{display:grid;grid-template-columns:44px 1fr 72px;grid-template-areas:"code label input";align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid var(--line)}
-.num .code{grid-area:code;font-family:var(--f-brand);font-size:26px;line-height:1;color:var(--purple);text-align:center}
+.num{display:grid;grid-template-columns:1fr 44px 72px;grid-template-areas:"label code input";align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid var(--line)}
+.num .code{grid-area:code;font-family:var(--f-brand);font-size:26px;line-height:1;color:var(--purple);text-align:right}
 .num input{grid-area:input;width:72px;text-align:center;font-weight:700;font-size:20px;font-variant-numeric:tabular-nums;border:2px solid var(--band);border-radius:16px;padding:8px 4px}
 .num input:focus{border-color:var(--purple);outline:none}
 .num.bad input{border-color:var(--err);background:var(--err-soft)}
@@ -121,7 +121,7 @@ td.act{width:58px;text-align:center}
   .nums{grid-template-columns:1fr} #qNums{grid-template-rows:none;grid-auto-flow:row}
   .band .inner{grid-template-columns:1fr}
   #qClub{min-width:0;width:100%}
-  .user small{display:none}
+  #me{display:none} /* on a phone: keep Afmelden and Export, drop the name */
 }
 
 [hidden]{display:none!important}
@@ -133,6 +133,12 @@ td.act{width:58px;text-align:center}
 .gate .err{background:var(--white);color:var(--err);border-radius:16px;padding:8px 14px;font-weight:700}
 .ms svg{width:18px;height:18px}
 td.saving{opacity:.5}
+.confirm{background:var(--orange);color:var(--white);border-radius:20px;padding:16px 20px;display:grid;gap:12px;max-width:760px}
+.confirm p{margin:0;font-weight:700;font-size:15px}
+.confirm-btns{display:flex;flex-wrap:wrap;gap:10px}
+.confirm .btn{background:var(--white);color:var(--orange)}
+.confirm .btn.primary{background:var(--ink);color:var(--white)}
+.msg.warn{background:#fff3e6;color:var(--ink);border-left:6px solid var(--orange);border-radius:12px;padding:12px 16px;font-size:14px}
 </style>
 </head>
 <body>
@@ -175,6 +181,10 @@ td.saving{opacity:.5}
     <h3>Pelvi <span>alleen Zandhoven</span></h3>
     <div class="nums" id="qExtraNums"></div>
   </div>
+  <div class="confirm" id="confirmBox" role="alertdialog" aria-labelledby="confirmText" hidden>
+    <p id="confirmText"></p>
+    <div class="confirm-btns"><button class="btn" id="confirmYes" type="button">Ja, toch opslaan</button><button class="btn primary" id="confirmNo" type="button">Annuleren</button></div>
+  </div>
   <div class="save">
     <button class="btn" id="add" type="button">➡️ Opslaan</button>
     <p class="msg" id="msg" role="status"></p>
@@ -182,7 +192,7 @@ td.saving{opacity:.5}
 </section>
 
 <section class="inner sheet" aria-labelledby="h3">
-  <div class="sheet-head"><h2 id="h3">Jouw laatste 30 dagen</h2><p>Wijzigingen worden meteen bewaard · Enter = cel eronder</p></div>
+  <div class="sheet-head"><h2 id="h3">Jouw laatste 30 dagen</h2><p>Wijzigingen worden meteen bewaard · Enter of Tab = cel rechts · ↑↓ = cel erboven/eronder</p></div>
   <div class="scroll"><table id="grid"><thead><tr id="headRow"></tr></thead><tbody></tbody></table></div>
   <div class="legend"><span>✓ = dagdeel al ingevuld (één invoer per dagdeel)</span><span>Velden: gehele getallen van 0 tot 99</span></div>
 </section>

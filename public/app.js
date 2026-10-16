@@ -54,7 +54,7 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
     });
     if (res.status === 204) return null;
     const data = res.headers.get('content-type')?.includes('json') ? await res.json() : await res.blob();
-    if (!res.ok) throw Object.assign(new Error(data.error || 'Er ging iets mis.'), { status: res.status, existingId: data.existingId });
+    if (!res.ok) throw Object.assign(new Error(data.error || 'Er ging iets mis.'), { status: res.status, existingId: data.existingId, overlap: data.overlap });
     return data;
   }
 
@@ -216,13 +216,21 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
     }
     $('add').disabled = true;
     try {
-      const saved = await api('POST', '/api/entries', { club, ...qPart, ...vals });
+      const body = { club, ...qPart, ...vals };
+      let saved;
+      try { saved = await api('POST', '/api/entries', body); }
+      catch (e) {
+        if (!e.overlap) throw e;
+        if (!await askOverlap(club, qPart, e.overlap)) { $('add').disabled = false; say('', ''); $('add').focus(); return; }
+        saved = await api('POST', '/api/entries', { ...body, confirmOverlap: true });
+      }
       rows.unshift(saved); sortRows(); render();
       FIELDS.forEach(f => { $('q' + f.key).value = '0'; $('q' + f.key).parentElement.classList.remove('bad'); });
       clubOptions(qClub, club);
       const doneLabel = label(qPart);
       qPart = null; qDateOnly = null; syncQuick(); // nothing preselected: pick the next daypart yourself
-      say('ok', `✓ Opgeslagen: ${club} · ${doneLabel}. Hup! Kies een dagdeel voor een volgende invoer.`); slide();
+      if (saved.overlap?.length) say('warn', `✓ Opgeslagen: ${club} · ${doneLabel}. ${contactText(club, doneLabel, saved.overlap)}`);
+      else { say('ok', `✓ Opgeslagen: ${club} · ${doneLabel}. Hup! Kies een dagdeel voor een volgende invoer.`); slide(); }
       msg.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     } catch (e) {
       $('add').disabled = !entryOpen();
@@ -270,6 +278,25 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
     const el = $(`c-${FIELDS[0].key}-${i}`); if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); el.select?.(); }
   }
 
+  // ---------- same club + daypart already filled in by someone else ----------
+  const names = list => { const n = list.map(o => o.name); return n.length > 1 ? n.slice(0, -1).join(', ') + ' en ' + n.at(-1) : n[0]; };
+  const withMail = list => list.map(o => o.email ? `${o.name} (${o.email})` : o.name);
+  function contactText(club, when, others) {
+    return `Let op: ${names(others)} heeft voor ${club} · ${when} ook al cijfers ingevuld. Neem contact op met ${withMail(others).join(' of ')} om te vragen de gegevens aan te passen, zodat er maar één correcte invoer overblijft.`;
+  }
+  // Shows the "are you sure?" box and resolves to true (save anyway) or false (cancel).
+  function askOverlap(club, part, others) {
+    return new Promise(resolve => {
+      const box = $('confirmBox');
+      $('confirmText').textContent = `${club} · ${label(part)} is al ingevuld door iemand anders. Ben je zeker dat je toch wil opslaan?`;
+      box.hidden = false; box.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      const done = ok => { box.hidden = true; $('confirmYes').onclick = $('confirmNo').onclick = null; resolve(ok); };
+      $('confirmYes').onclick = () => done(true);
+      $('confirmNo').onclick = () => done(false);
+      $('confirmNo').focus();
+    });
+  }
+
   async function saveRow(i, change, focusId) {
     const r = rows[i]; const next = { ...r, ...change };
     const tr = tbody.children[i];
@@ -278,8 +305,17 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
     if (active.some(f => !valid(next[f.key]))) { tr.classList.add('err'); say('err', `Rij ${i + 1}: gebruik gehele getallen van ${config.min} tot ${config.max}.`); return; }
     tr.querySelectorAll('td').forEach(td => td.classList.add('saving'));
     try {
-      const saved = await api('PUT', '/api/entries/' + r.id, { club: next.club, date: next.date, part: next.part, ...Object.fromEntries(active.map(f => [f.key, +next[f.key]])) });
-      rows[i] = saved; say('ok', `Rij ${i + 1} opgeslagen.`);
+      const body = { club: next.club, date: next.date, part: next.part, ...Object.fromEntries(active.map(f => [f.key, +next[f.key]])) };
+      let saved;
+      try { saved = await api('PUT', '/api/entries/' + r.id, body); }
+      catch (e) {
+        if (!e.overlap) throw e;
+        if (!await askOverlap(next.club, next, e.overlap)) { say('', 'Niet gewijzigd.'); sortRows(); render(); return; }
+        saved = await api('PUT', '/api/entries/' + r.id, { ...body, confirmOverlap: true });
+      }
+      rows[i] = saved;
+      if (saved.overlap?.length) say('warn', `Rij opgeslagen. ${contactText(saved.club, label(saved), saved.overlap)}`);
+      else say('ok', `Rij ${i + 1} opgeslagen.`);
     } catch (e) { say('err', `Rij ${i + 1}: ${e.message}`); }
     sortRows(); render(); syncQuick();
     const newIndex = rows.findIndex(x => x.id === r.id);
@@ -299,8 +335,15 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
     const t = e.target; if (!t.dataset || !t.dataset.f) return;
     const i = +t.dataset.r, f = t.dataset.f;
     const go = id => { const el = $(id); if (el) { el.focus(); el.select?.(); } };
-    const move = to => { e.preventDefault(); nextFocus = `c-${f}-${to}`; t.blur(); go(nextFocus); nextFocus = null; };
-    if (e.key === 'Enter' || e.key === 'ArrowDown') move(i + 1);
+    const jump = id => { e.preventDefault(); nextFocus = id; t.blur(); go(nextFocus); nextFocus = null; };
+    const move = to => jump(`c-${f}-${to}`);
+    if (e.key === 'Enter') {
+      // Enter = cell to the right (like Tab); after the last number in a row, the first number of the next row.
+      const cells = [...tbody.querySelectorAll('input[data-f]')];
+      const next = cells[cells.indexOf(t) + 1];
+      if (next) jump(next.id); else { e.preventDefault(); t.blur(); }
+    }
+    if (e.key === 'ArrowDown') move(i + 1);
     if (e.key === 'ArrowUp') move(i - 1);
   });
   // Delete takes two clicks: × then "Zeker?"

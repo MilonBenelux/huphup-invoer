@@ -126,15 +126,30 @@ app.get('/api/entries', auth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// Someone else already entered this club + daypart? The page asks "are you sure?" first and
+// then tells who it was, so the two can sort out which numbers are right.
+async function othersFor(req, e, exceptId = 0) {
+  const { rows } = await pool.query(
+    `SELECT DISTINCT user_name AS name, user_email AS email FROM entries
+     WHERE club=$1 AND day=$2 AND part=$3 AND user_oid<>$4 AND id<>$5`,
+    [e.club, e.date, e.part, req.user.oid, exceptId]);
+  return rows;
+}
+const overlapAnswer = (res, others) => res.status(409).json({
+  error: 'Deze club en dit dagdeel zijn al ingevuld door iemand anders.', overlap: others,
+});
+
 app.post('/api/entries', auth, async (req, res, next) => {
   const { errors, entry: e } = validateEntry(req.body);
   if (errors.length) return res.status(400).json({ error: errors.join(' ') });
   try {
+    const others = await othersFor(req, e);
+    if (others.length && !req.body.confirmOverlap) return overlapAnswer(res, others);
     const { rows } = await pool.query(
       `INSERT INTO entries (user_oid, user_name, user_email, club, club_id, day, part, ${COLS.join(', ')})
        VALUES (${[...Array(7 + COLS.length)].map((_, i) => '$' + (i + 1)).join(',')}) ${RETURNING}`,
       [req.user.oid, req.user.name, req.user.email, e.club, e.clubId, e.date, e.part, ...fieldValues(e)]);
-    res.status(201).json(toClient(rows[0]));
+    res.status(201).json({ ...toClient(rows[0]), overlap: others });
   } catch (err) { if (err.code === '23505') return taken(req, res, e); next(err); }
 });
 
@@ -142,12 +157,17 @@ app.put('/api/entries/:id', auth, async (req, res, next) => {
   const { errors, entry: e } = validateEntry(req.body);
   if (errors.length) return res.status(400).json({ error: errors.join(' ') });
   try {
+    // Only ask again when the club or daypart of this row changes, not for every number edit.
+    const { rows: cur } = await pool.query(`SELECT club, to_char(day,'YYYY-MM-DD') AS d, part FROM entries WHERE id=$1 AND user_oid=$2`, [req.params.id, req.user.oid]);
+    const moved = cur[0] && (cur[0].club !== e.club || cur[0].d !== e.date || cur[0].part !== e.part);
+    const others = moved ? await othersFor(req, e, Number(req.params.id)) : [];
+    if (others.length && !req.body.confirmOverlap) return overlapAnswer(res, others);
     const { rows } = await pool.query(
       `UPDATE entries SET club=$3, club_id=$4, day=$5, part=$6, ${COLS.map((c, i) => `${c}=$${i + 7}`).join(', ')}, updated_at=now()
        WHERE id=$1 AND user_oid=$2 ${RETURNING}`,
       [req.params.id, req.user.oid, e.club, e.clubId, e.date, e.part, ...fieldValues(e)]);
     if (!rows.length) return res.status(404).json({ error: 'Deze rij bestaat niet (meer).' });
-    res.json(toClient(rows[0]));
+    res.json({ ...toClient(rows[0]), overlap: others });
   } catch (err) { if (err.code === '23505') return taken(req, res, e); next(err); }
 });
 
