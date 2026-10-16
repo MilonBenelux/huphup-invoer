@@ -21,11 +21,13 @@ services:
       - key: DASHBOARD_URL
         sync: false        # URL of the GHL agency dashboard, e.g. https://ghl-agency-dashboard-xxxx.onrender.com
       - key: DASHBOARD_KEY
-        sync: false        # the dashboard's ACCESS_KEY (the club list comes from there)
+        sync: false        # the dashboard's CLUBS_KEY (or its ACCESS_KEY if no CLUBS_KEY is set)
       - key: EXCLUDE_CLUBS
         sync: false        # optional: sub-accounts that are not clubs, e.g. Fysioworld,huphup leeg
       - key: ADMIN_EMAILS
         sync: false        # e.g. karl.peeters@huphup.be
+      - key: EXPORT_KEY
+        generateValue: true  # key for the Excel link /export.csv?key=...
       - key: EXTRA_FIELD_CLUBS
         value: Zandhoven   # clubs whose name contains this get the Pelvi fields
 

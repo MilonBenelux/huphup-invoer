@@ -230,7 +230,15 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
       if (e.existingId) focusRow(e.existingId);
     }
   };
-  $('qFields').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('add').click(); } });
+  // Enter in a number field moves on to the next field (like Tab); after the last field it lands on
+  // the Opslaan button. Only the button itself saves (click, or Enter/Space while it has focus).
+  $('qFields').addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
+    e.preventDefault();
+    const inputs = [...$('qFields').querySelectorAll('.nums input')].filter(i => i.offsetParent !== null);
+    const next = inputs[inputs.indexOf(e.target) + 1];
+    (next || $('add')).focus();
+  });
 
   // ---------- grid ----------
   const tbody = document.querySelector('#grid tbody');

@@ -67,7 +67,7 @@ In the Entra admin centre, go to **App registrations → New registration**.
    | `TENANT_ID` | Directory (tenant) ID |
    | `CLIENT_ID` | Application (client) ID |
    | `DASHBOARD_URL` | Address of your **ghl-agency-dashboard** service, e.g. `https://ghl-agency-dashboard-xxxx.onrender.com` |
-| `DASHBOARD_KEY` | The dashboard's `ACCESS_KEY` (copy it from the dashboard's Environment page) |
+| `DASHBOARD_KEY` | The dashboard's `CLUBS_KEY` (a separate key just for the club list; see the dashboard README) |
 | `EXCLUDE_CLUBS` | Optional. Sub-accounts in the dashboard that aren't clubs, comma-separated, e.g. `Fysioworld,huphup leeg` |
    | `ADMIN_EMAILS` | Who may export, for example `karl.peeters@huphup.be` |
 | `EXTRA_FIELD_CLUBS` | Optional. Part of the club name that gets the Pelvi fields; default `Zandhoven` |
@@ -101,3 +101,16 @@ All calls need `Authorization: Bearer <token for api://<client-id>/access_as_use
 | PUT | `/api/entries/:id` | Same body; only your own rows |
 | DELETE | `/api/entries/:id` | Only your own rows |
 | GET | `/api/export.csv` | All entries (admins only); semicolon-separated for Excel |
+
+## Data in Excel
+
+**One-off:** people listed in `ADMIN_EMAILS` (comma-separated, e.g. `karl.peeters@huphup.be,collega@huphup.be`) see **Export (CSV)** at the top of the form.
+
+**Live sheet that refreshes:**
+1. On Render, open **huphup-invoer → Environment**, add `EXPORT_KEY`, click **Generate**, then **Save changes**.
+2. Your link is `https://huphup-invoer.onrender.com/export.csv?key=<EXPORT_KEY>`. Test it in a browser: it downloads the CSV.
+3. In Excel, go to **Data → From Web** (Gegevens → Van het web), paste the link and click **OK**. If Excel asks how to connect, choose **Anonymous** (the key in the link is the protection).
+4. In the preview, check that the delimiter is **Semicolon**, then click **Load**.
+5. To update: **Data → Refresh All**. For automatic refresh, go to **Data → Queries & Connections**, right-click the query, choose **Properties**, and tick *Refresh data when opening the file* and/or *Refresh every … minutes*.
+
+Anyone with the full link can read all entries. Keep the link and the Excel file private. If it leaks, generate a new `EXPORT_KEY` on Render and paste the new link into Excel (**Data → Queries & Connections → right-click → Edit → Source**).

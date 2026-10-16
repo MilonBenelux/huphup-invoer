@@ -159,18 +159,41 @@ app.delete('/api/entries/:id', auth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// All entries as CSV, for the people listed in ADMIN_EMAILS.
+// ---- export ----
+// All entries as CSV (semicolon-separated, UTF-8 with BOM, so Belgian Excel opens it directly).
+async function exportCsv() {
+  const { rows } = await pool.query(`SELECT to_char(day,'YYYY-MM-DD') AS datum, part AS dagdeel, club, club_id AS "location_id",
+      user_name AS ingevoerd_door, user_email AS email,
+      ${FIELD_DEFS.map(f => `${column(f)} AS "${f.key} ${f.label}"`).join(', ')},
+      to_char(created_at AT TIME ZONE 'Europe/Brussels', 'YYYY-MM-DD HH24:MI') AS aangemaakt,
+      to_char(updated_at AT TIME ZONE 'Europe/Brussels', 'YYYY-MM-DD HH24:MI') AS gewijzigd
+    FROM entries ORDER BY day DESC, part DESC, club`);
+  const cols = ['datum', 'dagdeel', 'club', 'location_id', 'ingevoerd_door', 'email', ...FIELD_DEFS.map(f => `${f.key} ${f.label}`), 'aangemaakt', 'gewijzigd'];
+  const esc = v => { const s = String(v ?? ''); return /[";\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  return '\uFEFF' + [cols.join(';'), ...rows.map(r => cols.map(c => esc(r[c])).join(';'))].join('\r\n');
+}
+function sendCsv(res, csv) {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Content-Disposition', `attachment; filename="huphup-invoer-${brusselsNow().date}.csv"`);
+  res.send(csv);
+}
+
+// For people in ADMIN_EMAILS: the "Export (CSV)" button in the form.
 app.get('/api/export.csv', auth, async (req, res, next) => {
   if (!ADMINS.includes(req.user.email)) return res.status(403).json({ error: 'Alleen voor beheerders.' });
-  try {
-    const { rows } = await pool.query(`SELECT to_char(day,'YYYY-MM-DD') AS datum, part AS dagdeel, club, club_id AS "location_id", user_name AS ingevoerd_door, user_email AS email, ${FIELD_DEFS.map(f => `${column(f)} AS "${f.key} ${f.label}"`).join(', ')}, created_at AS aangemaakt FROM entries ORDER BY day DESC, part DESC, club`);
-    const cols = ['datum', 'dagdeel', 'club', 'location_id', 'ingevoerd_door', 'email', ...FIELD_DEFS.map(f => `${f.key} ${f.label}`), 'aangemaakt'];
-    const esc = v => { const s = v instanceof Date ? v.toISOString() : String(v ?? ''); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-    const csv = [cols.join(';'), ...rows.map(r => cols.map(c => esc(r[c])).join(';'))].join('\r\n');
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="huphup-invoer-${brusselsNow().date}.csv"`);
-    res.send('﻿' + csv); // BOM so Excel opens it as UTF-8
-  } catch (e) { next(e); }
+  try { sendCsv(res, await exportCsv()); } catch (e) { next(e); }
+});
+
+// For Excel (Data → From Web): /export.csv?key=<EXPORT_KEY>. Excel can't do the Microsoft sign-in,
+// so this address uses its own key. Without EXPORT_KEY on Render this address is switched off.
+const crypto = require('crypto');
+const sameKey = (a, b) => { const x = crypto.createHash('sha256').update(String(a)).digest(), y = crypto.createHash('sha256').update(String(b)).digest(); return crypto.timingSafeEqual(x, y); };
+app.get('/export.csv', async (req, res, next) => {
+  const key = process.env.EXPORT_KEY;
+  if (!key) return res.status(404).type('text/plain').send('Export via link staat uit (EXPORT_KEY is niet ingesteld).');
+  if (!sameKey(req.query.key || '', key)) return res.status(403).type('text/plain').send('Ongeldige sleutel.');
+  try { sendCsv(res, await exportCsv()); } catch (e) { next(e); }
 });
 
 // MSAL browser library, served from the installed npm package.
