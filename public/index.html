@@ -87,7 +87,8 @@ select,input{font:inherit;color:var(--ink);background:var(--white);border:0;bord
 .pelvi .num{border-bottom-color:rgba(255,255,255,.5)}
 .save{display:flex;flex-wrap:wrap;align-items:center;gap:16px}
 .msg{margin:0;font-weight:700;font-size:14px}
-.msg.ok{color:var(--green)} .msg.err{color:var(--err)} .msg.warn{color:var(--orange)}
+.msg.ok{color:var(--white);background:var(--green);border-radius:16px;padding:12px 18px;font-size:15px}
+.hint{margin:0;font-weight:700;color:var(--purple);font-size:16px} .msg.err{color:var(--err)} .msg.warn{color:var(--orange)}
 
 /* step 3: the sheet */
 .sheet{padding-block:10px 56px;display:grid;gap:14px}
@@ -168,6 +169,7 @@ td.saving{opacity:.5}
 </div></section>
 
 <section class="inner nums-wrap" id="qFields" aria-label="Cijfers">
+  <p class="hint" id="qHint" hidden></p>
   <div class="nums" id="qNums"></div>
   <div class="pelvi" id="qExtra" hidden>
     <h3>Pelvi <span>alleen Zandhoven</span></h3>

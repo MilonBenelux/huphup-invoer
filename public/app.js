@@ -149,7 +149,10 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
   const qClub = $('qClub'), qDate = $('qDate'), bVM = $('bVM'), bNM = $('bNM'), chips = $('chips'), msg = $('msg');
   const isTaken = (p, exceptId) => rows.some(r => key(r) === key(p) && r.id !== exceptId);
   const firstFree = () => PARTS.find(p => !isTaken(p)) || PARTS[0];
+  // The first time, the most likely daypart is preselected. After a save nothing is preselected:
+  // the number fields stay hidden until a daypart is picked again.
   let qPart = firstFree();
+  let qDateOnly = null; // a date picked in the calendar while VM/NM is not chosen yet
   FIELDS.forEach(f => {
     const l = document.createElement('label'); l.className = 'num';
     l.innerHTML = `<span class="code">${f.key}</span><input id="q${f.key}" inputmode="numeric" type="number" min="${config.min}" max="${config.max}" step="1" value="0"><small>${f.label}</small>`;
@@ -160,16 +163,22 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
     i.addEventListener('focus', () => i.select());
     i.addEventListener('input', () => i.parentElement.classList.toggle('bad', i.value !== '' && !valid(i.value)));
   });
-  const syncExtra = () => { $('qExtra').hidden = !(hasExtra && isExtraClub(qClub.value)); };
+  const entryOpen = () => !!qPart && !isTaken(qPart);
+  const syncExtra = () => { $('qExtra').hidden = !(entryOpen() && hasExtra && isExtraClub(qClub.value)); };
   qClub.addEventListener('change', syncExtra);
 
   function syncQuick() {
-    qDate.min = PARTS[PARTS.length - 1].date; qDate.max = PARTS[0].date; qDate.value = qPart.date;
-    bVM.disabled = !PARTS.some(p => p.date === qPart.date && p.part === 'VM');
-    bNM.disabled = !PARTS.some(p => p.date === qPart.date && p.part === 'NM');
-    bVM.setAttribute('aria-pressed', qPart.part === 'VM'); bNM.setAttribute('aria-pressed', qPart.part === 'NM');
-    const done = isTaken(qPart);
-    $('add').disabled = done;
+    const date = qPart ? qPart.date : qDateOnly;
+    qDate.min = PARTS[PARTS.length - 1].date; qDate.max = PARTS[0].date; qDate.value = date || '';
+    bVM.disabled = !date || !PARTS.some(p => p.date === date && p.part === 'VM');
+    bNM.disabled = !date || !PARTS.some(p => p.date === date && p.part === 'NM');
+    bVM.setAttribute('aria-pressed', qPart?.part === 'VM'); bNM.setAttribute('aria-pressed', qPart?.part === 'NM');
+    const done = !!qPart && isTaken(qPart);
+    const open = entryOpen();
+    $('qNums').hidden = !open; $('add').hidden = !open; $('add').disabled = !open;
+    $('qHint').hidden = open || done;
+    $('qHint').textContent = qDateOnly ? 'Kies VM of NM.' : 'Kies een dagdeel hierboven om je cijfers in te vullen.';
+    syncExtra();
     if (done) say('warn', `${label(qPart)} heb je al ingevuld. Pas het aan in de tabel of kies een ander dagdeel.`);
     else if (msg.classList.contains('warn')) say('', '');
     chips.innerHTML = '';
@@ -178,22 +187,27 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
       const done = isTaken(p);
       b.textContent = label(p) + (done ? ' ✓' : ''); b.disabled = done;
       if (done) b.title = 'Al ingevuld';
-      b.setAttribute('aria-pressed', !done && key(p) === key(qPart)); b.onclick = () => { qPart = p; syncQuick(); };
+      b.setAttribute('aria-pressed', !done && !!qPart && key(p) === key(qPart)); b.onclick = () => pick(p);
       chips.appendChild(b);
     });
   }
+  function pick(p) { qPart = p; qDateOnly = null; say('', ''); syncQuick(); if (entryOpen()) $('q' + FIELDS[0].key).focus(); }
   qDate.addEventListener('change', () => {
     const opts = PARTS.filter(p => p.date === qDate.value);
-    if (!opts.length) { say('err', 'Kies een datum van vandaag tot 30 dagen terug.'); qDate.value = qPart.date; return; }
-    qPart = opts.find(p => p.part === qPart.part) || opts[0]; say('', ''); syncQuick();
+    if (!opts.length) { say('err', 'Kies een datum van vandaag tot 30 dagen terug.'); syncQuick(); return; }
+    if (opts.length === 1) return pick(opts[0]);              // only one daypart possible that day
+    const same = qPart && opts.find(p => p.part === qPart.part);
+    if (same) return pick(same);
+    qPart = null; qDateOnly = qDate.value; say('', ''); syncQuick();  // let them choose VM or NM
   });
-  bVM.onclick = () => { qPart = { date: qPart.date, part: 'VM' }; syncQuick(); };
-  bNM.onclick = () => { qPart = { date: qPart.date, part: 'NM' }; syncQuick(); };
+  bVM.onclick = () => pick({ date: qPart ? qPart.date : qDateOnly, part: 'VM' });
+  bNM.onclick = () => pick({ date: qPart ? qPart.date : qDateOnly, part: 'NM' });
   function say(kind, text) { msg.className = 'msg ' + kind; msg.textContent = text; }
 
   $('add').onclick = async () => {
     const vals = {};
     const club = qClub.value;
+    if (!entryOpen()) return;
     for (const f of FIELDS) {
       if (!applies(f, club)) continue;
       const v = $('q' + f.key).value.trim();
@@ -207,11 +221,11 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
       FIELDS.forEach(f => { $('q' + f.key).value = '0'; $('q' + f.key).parentElement.classList.remove('bad'); });
       clubOptions(qClub, club);
       const doneLabel = label(qPart);
-      qPart = firstFree(); syncQuick();
-      say('ok', `Opgeslagen: ${club} · ${doneLabel}. Hup!`); slide();
-      $('q' + FIELDS[0].key).focus();
+      qPart = null; qDateOnly = null; syncQuick(); // nothing preselected: pick the next daypart yourself
+      say('ok', `✓ Opgeslagen: ${club} · ${doneLabel}. Hup! Kies een dagdeel voor een volgende invoer.`); slide();
+      msg.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     } catch (e) {
-      $('add').disabled = false;
+      $('add').disabled = !entryOpen();
       say('err', e.message);
       if (e.existingId) focusRow(e.existingId);
     }
@@ -295,9 +309,8 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
     try {
       const c = await api('GET', '/api/config');
       if (c.parts.length !== PARTS.length || c.today !== config.today) {
-        const wasTop = key(qPart) === key(firstFree());
         config = c; PARTS = c.parts;
-        if (wasTop || !PARTS.some(p => key(p) === key(qPart))) qPart = firstFree();
+        if (qPart && !PARTS.some(p => key(p) === key(qPart))) qPart = null;
         syncQuick(); render();
       }
     } catch (e) { /* try again next round */ }
