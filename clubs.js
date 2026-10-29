@@ -48,11 +48,29 @@ async function saveToDb(list) {
   finally { client.release(); }
 }
 
+// A club renamed in the dashboard keeps its LocationId: carry the new name over to the stored
+// registrations and to the managers' club lists, so nothing stays behind under the old name.
+let renameListener = null;
+const onRename = fn => { renameListener = fn; };
+async function applyRenames(oldList, newList) {
+  const oldById = new Map(oldList.filter(c => !c.id.startsWith('name:')).map(c => [c.id, c.name]));
+  for (const c of newList) {
+    const before = oldById.get(c.id);
+    if (!before || before === c.name) continue;
+    const e = await pool.query('UPDATE entries SET club=$1 WHERE club_id=$2 OR (club_id IS NULL AND club=$3)', [c.name, c.id, before]);
+    const p = await pool.query('UPDATE people SET clubs=array_replace(clubs, $2, $1) WHERE $2 = ANY(clubs)', [c.name, before]).catch(() => ({ rowCount: 0 }));
+    console.log(`Club renamed: "${before}" → "${c.name}" (${e.rowCount} registrations, ${p.rowCount} managers updated)`);
+    if (renameListener) await renameListener(before, c.name);
+  }
+}
+
 async function refresh() {
   lastTry = Date.now();
   try {
     const list = await fetchFromDashboard();
+    const previous = clubs;
     clubs = list; loadedAt = new Date(); lastError = null;
+    await applyRenames(previous, list);
     await saveToDb(list);
     console.log(`Club list: ${list.length} clubs from the GHL dashboard`);
     if (retryTimer) { clearInterval(retryTimer); retryTimer = null; }
@@ -88,4 +106,4 @@ async function init(pgPool) {
 const list = () => clubs;
 const byName = name => clubs.find(c => c.name === name);
 
-module.exports = { init, list, byName, refresh, ensure, status: () => ({ count: clubs.length, loadedAt, error: lastError }) };
+module.exports = { init, list, byName, refresh, ensure, onRename, status: () => ({ count: clubs.length, loadedAt, error: lastError }) };

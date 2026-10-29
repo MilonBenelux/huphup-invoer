@@ -1,3 +1,8 @@
 node_modules/
 .env
-managers.csv
+# data files with personal data never go to GitHub
+*.csv
+*.xlsx
+*.xls
+*.xlsm
+~$*

@@ -233,4 +233,4 @@ function exportCsv() {
     ...list().map(p => [p.email, p.scope, p.clubs.join('|'), yes(p.can_export), yes(p.is_admin), yes(p.is_owner)].join(';'))].join('\r\n');
 }
 
-module.exports = { init, roleFor, rightsFor, list, upsert, remove, importCsv, exportCsv, RuleError, parseCsv };
+module.exports = { init, reload, roleFor, rightsFor, list, upsert, remove, importCsv, exportCsv, RuleError, parseCsv };

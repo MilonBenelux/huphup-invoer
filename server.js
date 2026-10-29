@@ -359,6 +359,7 @@ app.use((err, req, res, next) => {
   }
   await pool.query(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
   await pool.query('ALTER TABLE entries ADD COLUMN IF NOT EXISTS club_id TEXT'); // GHL LocationId of the club
+  clubs.onRename(() => managers.reload().catch(() => {})); // a renamed club also changes in the managers' lists
   await clubs.init(pool);
   await managers.init(pool);
   for (const f of FIELD_DEFS) {
