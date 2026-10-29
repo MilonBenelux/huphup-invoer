@@ -321,7 +321,10 @@ app.post('/api/admin/entries.csv', adminAuth, express.text({ type: '*/*', limit:
     const r = await history.run(pool, String(req.body || ''),
       { fields: FIELD_DEFS, column, clubList: clubs.list(), isExtraClub, min: MIN, max: MAX }, req.query.dryrun === '1');
     if (r.error) return res.status(400).json({ error: r.error });
-    if (!r.dryRun) console.log(`History import by ${req.actor.email}: ${r.inserted} rows`);
+    if (!r.dryRun) {
+      console.log(`History import by ${req.actor.email}: ${r.inserted} rows`);
+      await history.linkKnown(pool); // people who already use the app get their old rows right away
+    }
     res.json(r);
   } catch (e) { next(e); }
 });
@@ -362,6 +365,7 @@ app.use((err, req, res, next) => {
   clubs.onRename(() => managers.reload().catch(() => {})); // a renamed club also changes in the managers' lists
   await clubs.init(pool);
   await managers.init(pool);
+  await history.linkKnown(pool).catch(e => console.warn('History link failed:', e.message)); // imported rows of known people
   for (const f of FIELD_DEFS) {
     // Pelvi-type fields stay empty (NULL) for clubs they don't apply to.
     await pool.query(`ALTER TABLE entries ADD COLUMN IF NOT EXISTS ${column(f)} SMALLINT CHECK (${column(f)} BETWEEN ${MIN} AND ${MAX})`);

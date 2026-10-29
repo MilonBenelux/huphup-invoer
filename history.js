@@ -181,8 +181,8 @@ async function run(pool, text, opts, dryRun) {
  * and is removed. Runs once per account per server start.
  */
 const relinked = new Set();
-async function relink(pool, user) {
-  if (!user?.oid || relinked.has(user.oid)) return;
+async function relink(pool, user, force = false) {
+  if (!user?.oid || (relinked.has(user.oid) && !force)) return;
   relinked.add(user.oid);
   const stand = (user.emails || []).map(placeholderOid);
   if (!stand.length) return;
@@ -208,4 +208,27 @@ async function relink(pool, user) {
   }
 }
 
-module.exports = { plan, run, relink, placeholderOid, parseDate, parsePosted };
+/**
+ * Links imported rows for everyone whose real account is already known: a person who entered at least one
+ * daypart in the app has their real account id next to their e-mail address. Runs at server start and after
+ * every import, so people don't have to sign in again (and nobody shows up twice in Resultaten).
+ */
+async function linkKnown(pool) {
+  const { rows } = await pool.query(
+    `SELECT DISTINCT lower(user_email) AS email, user_oid::text AS oid FROM entries WHERE user_email IS NOT NULL`);
+  const real = new Map(), stand = new Set();
+  for (const r of rows) {
+    if (r.oid === placeholderOid(r.email)) stand.add(r.email);
+    else (real.get(r.email) || real.set(r.email, new Set()).get(r.email)).add(r.oid);
+  }
+  let linked = 0;
+  for (const email of stand) {
+    const oids = [...(real.get(email) || [])];
+    if (oids.length !== 1) continue; // not signed in yet (or ambiguous): linked at their first sign-in
+    await relink(pool, { oid: oids[0], email, emails: [email] }, true);
+    linked++;
+  }
+  return linked;
+}
+
+module.exports = { plan, run, relink, linkKnown, placeholderOid, parseDate, parsePosted };
