@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>HUPHUP Beheer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;800&display=swap">
+<style>
+@font-face{font-family:"huphup";src:url(/fonts/huphup.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+/* Layout: huphup.be look — purple header, grey band with the "add" form, then the people table. */
+:root{
+  color-scheme:light;
+  --purple:#7680ff; --purple-dark:#525cd6; --purple-soft:#eef0ff; --orange:#f98d3d; --green:#39c97d; --pink:#f8a3d2;
+  --ink:#161616; --grey:#6f6f6f; --band:#e6e6e6; --line:#ededee; --white:#ffffff; --row:#fafafb; --err:#d63c2f; --err-soft:#fde7e4;
+  --f-brand:"huphup","Montserrat",Helvetica,Arial,sans-serif;
+  --f-body:"Montserrat",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--white);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;margin:0}
+.inner{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button,input,select{font:inherit}
+button{cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+
+header.top{background:var(--purple);color:var(--white)}
+header.top .inner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 26px}
+.logo{font-family:var(--f-brand);font-size:26px;line-height:1}
+.logo span{font-family:var(--f-body);font-size:12px;font-weight:700;background:var(--white);color:var(--purple);border-radius:320px;padding:3px 10px;margin-left:8px;vertical-align:5px}
+.nav{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.nav a,.nav button{color:var(--white);font-weight:700;font-size:13px;background:none;border:0;padding:4px 6px;text-decoration:underline;text-underline-offset:3px}
+.who{background:var(--purple-dark);border-radius:320px;padding:6px 14px;font-size:13px;font-weight:700}
+.who small{font-weight:500;opacity:.85}
+.title{flex-basis:100%}
+.title h1{font-family:var(--f-brand);font-weight:400;font-size:clamp(30px,5vw,46px);line-height:1;margin:0}
+
+.band{background:var(--band)}
+.band .inner{padding-block:18px;display:grid;gap:12px}
+.band h2{margin:0;font-size:16px}
+.row{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-end}
+.lbl{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--grey);margin-bottom:5px}
+.band input[type=email],.band select,.tools input[type=search]{color:var(--ink);background:var(--white);border:0;border-radius:320px;padding:9px 16px;min-width:0;max-width:100%}
+#nEmail{width:300px}
+.check{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:13px;padding-bottom:9px}
+.check input{width:18px;height:18px;accent-color:var(--purple)}
+.check.locked{opacity:.45}
+.btn{font-weight:700;border:0;border-radius:320px;padding:10px 22px;background:var(--orange);color:var(--white)}
+.btn.primary{background:var(--purple)} .btn.ghost{background:var(--white);color:var(--purple);border:2px solid var(--purple);padding:8px 18px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:2px solid var(--purple);background:var(--white);color:var(--purple);border-radius:320px;padding:3px 11px;font-weight:700;font-size:12.5px}
+.chip[aria-pressed="true"]{background:var(--purple);color:var(--white)}
+.chip.static{cursor:default;border-color:var(--purple-soft);background:var(--purple-soft)}
+
+main{padding-block:18px 50px;display:grid;gap:14px}
+.lead{margin:0;color:var(--grey);max-width:90ch}
+.warn{background:#fff3e6;border-left:6px solid var(--orange);border-radius:12px;padding:10px 14px;font-size:13px}
+.msg{margin:0;font-weight:700;min-height:1.5em}
+.msg.ok{color:#167a45} .msg.err{color:var(--err)}
+.hist{border-top:2px solid var(--line);padding-top:18px;display:grid;gap:10px}
+.hist h2{margin:0;font-size:16px}
+.sum{background:var(--purple-soft);border-radius:14px;padding:14px 16px;display:grid;gap:8px}
+.sum p{margin:0} .sum ul{margin:0;padding-left:20px} .sum details summary{cursor:pointer;font-weight:700}
+.sum .big{font-size:22px;font-weight:800;color:var(--purple-dark)}
+.tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.tools .right{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.scroll{overflow-x:auto;border:2px solid var(--line);border-radius:20px}
+table{border-collapse:collapse;width:100%;min-width:900px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+thead th{background:var(--purple);color:var(--white);font-size:12px;font-weight:700;white-space:nowrap}
+thead th.c{text-align:center;width:70px}
+td.c{text-align:center}
+td.c input{width:18px;height:18px;accent-color:var(--purple)}
+td.c input:disabled{opacity:.4}
+td.email{font-weight:700;min-width:250px;overflow-wrap:anywhere}
+td select{border:1px solid var(--line);border-radius:320px;padding:5px 10px;background:var(--white)}
+td.when{font-size:12px;color:var(--grey);white-space:nowrap}
+tr.edit td{background:var(--row)}
+tr.edit .chips{padding:4px 0 4px 6px}
+.badge{display:inline-block;font-size:11px;font-weight:700;border-radius:320px;padding:1px 8px;margin-left:6px;vertical-align:1px}
+.badge.owner{background:var(--orange);color:var(--white)} .badge.admin{background:var(--purple);color:var(--white)} .badge.me{background:var(--band);color:var(--ink)}
+.del{border:0;background:none;color:var(--grey);font-weight:700;padding:6px 8px}
+.del:hover,.del.sure{color:var(--err)}
+.del:disabled{opacity:.3;cursor:not-allowed}
+.gate{padding-block:40px} .gate p{font-weight:700;font-size:16px;margin:0 0 14px}
+.legend{font-size:12.5px;color:var(--grey);max-width:100ch;margin:0}
+@media (max-width:700px){ .who small{display:none} #nEmail{width:100%} }
+</style>
+</head>
+<body>
+<header class="top"><div class="inner">
+  <div class="logo">HUpHuP<span>beheer</span></div>
+  <div class="nav"><a href="/">← Invoer</a><a href="/resultaten.html" id="toResults" hidden>Resultaten</a><div class="who" id="who"></div><button type="button" id="logout">Afmelden</button></div>
+  <div class="title"><h1>Managers &amp; rechten</h1></div>
+</div></header>
+
+<section class="gate" id="gate" hidden><div class="inner"><p id="gateMsg">Bezig met laden…</p><button class="btn primary" id="login" type="button" hidden>Aanmelden met Microsoft</button></div></section>
+
+<div id="app" hidden>
+<section class="band" aria-labelledby="addH"><div class="inner">
+  <h2 id="addH">Persoon toevoegen of wijzigen</h2>
+  <div class="row">
+    <div><label class="lbl" for="nEmail">E-mailadres</label><input type="email" id="nEmail" placeholder="naam@huphup.be" autocomplete="off"></div>
+    <div><label class="lbl" for="nScope">Ziet in Resultaten</label><select id="nScope"><option value="club">Clubmanager</option><option value="global">Globale manager (alle clubs)</option><option value="none">Niets (alleen admin)</option></select></div>
+    <label class="check"><input type="checkbox" id="nCsv" checked> CSV-export</label>
+    <label class="check own"><input type="checkbox" id="nAdmin"> Admin</label>
+    <label class="check own"><input type="checkbox" id="nOwner"> Owner</label>
+    <button class="btn" id="add" type="button">Opslaan</button>
+  </div>
+  <div id="nClubsBox"><span class="lbl">Clubs</span><div class="chips" id="nClubs"></div></div>
+</div></section>
+
+<main class="inner">
+  <p class="lead"><b>Clubmanager</b>: ziet zijn clubs in Resultaten. <b>Globale manager</b>: ziet alle clubs. <b>CSV-export</b>: mag de ingevulde gegevens downloaden (alleen van de clubs die hij ziet). <b>Admin</b>: mag deze pagina gebruiken en managers beheren. <b>Owner</b>: admin die ook admin- en owner-rechten kan geven en afnemen. Er blijft altijd minstens één owner en één admin.</p>
+  <div class="warn" id="noMgr" hidden></div>
+  <p class="msg" id="msg" role="status"></p>
+  <div class="tools">
+    <input type="search" id="filter" placeholder="Zoek op e-mail of club" aria-label="Zoeken">
+    <div class="right">
+      <button class="btn ghost" id="csvOut" type="button">Download lijst (CSV)</button>
+      <label class="btn ghost" for="csvIn" style="cursor:pointer">Importeer CSV</label><input type="file" id="csvIn" accept=".csv,.txt,text/csv" hidden>
+      <label class="check" style="padding:0"><input type="checkbox" id="csvReplace"> Import vervangt de huidige managers</label>
+    </div>
+  </div>
+  <div class="scroll"><table>
+    <thead><tr><th>E-mail</th><th>Ziet in Resultaten</th><th>Clubs</th><th class="c">CSV</th><th class="c">Admin</th><th class="c">Owner</th><th>Laatst gewijzigd</th><th></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+  <p class="legend">Wijzigingen in de tabel worden meteen bewaard. Klik op “Clubs ▾” om clubs aan of uit te zetten. CSV-import: één regel per persoon en club (<code>e-mail;club</code> of <code>e-mail;global</code>), of het formaat van “Download lijst”. Admin- en owner-kolommen in een import worden alleen toegepast als een owner importeert.</p>
+  <section class="hist" aria-labelledby="histH">
+    <h2 id="histH">Historiek importeren</h2>
+    <p class="lead">Oude registraties (bv. de CSV met rapportages) in één keer inladen. Kolommen: <code>email;afzender;gepost;datum;dagdeel;club;L;C;A;P;I;R;F</code>. Je ziet eerst een proefrun; er wordt pas iets bewaard als je bevestigt. Per persoon en dagdeel telt het laatst geposte rapport; dagdelen die al in de app staan worden overgeslagen. Wie zich later aanmeldt, ziet zijn oude registraties automatisch bij zijn account.</p>
+    <div class="row">
+      <label class="btn ghost" for="histIn" style="cursor:pointer">Kies CSV met historiek</label><input type="file" id="histIn" accept=".csv,.txt,text/csv" hidden>
+    </div>
+    <div class="sum" id="histSum" hidden></div>
+  </section>
+</main>
+</div>
+
+<script src="/vendor/msal-browser.js"></script>
+<script>
+(async function(){
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const gate=t=>{$("gate").hidden=false;$("app").hidden=true;$("gateMsg").textContent=t;};
+  const say=(k,t)=>{$("msg").className="msg "+k;$("msg").textContent=t;};
+
+  // ---------- sign-in (same Microsoft app as the entry form) ----------
+  let token, api;
+  try{
+    const pub=await fetch("/api/public-config").then(r=>r.json());
+    const msalApp=new msal.PublicClientApplication({auth:{clientId:pub.clientId,authority:`https://login.microsoftonline.com/${pub.tenantId}`,redirectUri:location.origin+"/",postLogoutRedirectUri:location.origin+"/"},cache:{cacheLocation:"localStorage"}});
+    await msalApp.initialize();
+    await msalApp.handleRedirectPromise().catch(()=>null);
+    const account=msalApp.getAllAccounts()[0];
+    if(!account){gate("Meld je aan om managers te beheren.");$("login").hidden=false;$("login").onclick=()=>msalApp.loginRedirect({scopes:[pub.scope],redirectStartPage:location.href});return;}
+    $("logout").onclick=()=>msalApp.logoutRedirect({account});
+    const getToken=async()=>{try{return (await msalApp.acquireTokenSilent({scopes:[pub.scope],account})).accessToken}
+      catch(e){if(e instanceof msal.InteractionRequiredAuthError)await msalApp.acquireTokenRedirect({scopes:[pub.scope],account,redirectStartPage:location.href});throw e}};
+    api=async(method,url,body,type)=>{
+      const res=await fetch(url,{method,headers:{Authorization:"Bearer "+await getToken(),...(body!=null?{"Content-Type":type||"application/json"}:{})},body:body==null?undefined:(type?body:JSON.stringify(body))});
+      const isJson=res.headers.get("content-type")?.includes("json");
+      const data=isJson?await res.json():await res.blob();
+      if(!res.ok) throw new Error(data.error||"Er ging iets mis.");
+      return data;
+    };
+  }catch(e){gate("Aanmelden is niet gelukt. Probeer het opnieuw.");return;}
+
+  // ---------- data ----------
+  let D;
+  try{ D=await api("GET","/api/admin/people"); }catch(e){gate(e.message);return;}
+  $("gate").hidden=true; $("app").hidden=false;
+  const cfg=await api("GET","/api/config").catch(()=>null);
+  if(cfg?.user?.isManager) $("toResults").hidden=false;
+  $("who").innerHTML=`${esc(cfg?.user?.name||D.me.email)} <small>· ${D.me.owner?"owner":"admin"}</small>`;
+  const isOwner=D.me.owner;
+  document.querySelectorAll(".check.own").forEach(l=>{l.classList.toggle("locked",!isOwner);l.querySelector("input").disabled=!isOwner;l.title=isOwner?"":"Alleen een owner kan dit wijzigen"});
+
+  const open=new Set();      // rows with the club picker open
+  let sureDel=null;          // email waiting for the second click on ✕
+  const scopeName={none:"Niets",club:"Clubmanager",global:"Globale manager"};
+
+  function apply(data){ if(data.people) D.people=data.people; render(); }
+  async function save(email,changes,okText){
+    const p=D.people.find(x=>x.email===email)||{scope:"club",clubs:[],can_export:true,is_admin:false,is_owner:false};
+    const body={scope:p.scope,clubs:p.clubs,can_export:p.can_export,is_admin:p.is_admin,is_owner:p.is_owner,...changes};
+    try{ apply(await api("PUT","/api/admin/people/"+encodeURIComponent(email),body)); say("ok",okText||`${email} bewaard.`); return true; }
+    catch(e){ say("err",e.message); render(); return false; }
+  }
+
+  // ---------- add form ----------
+  let nClubs=new Set();
+  function drawNewClubs(){
+    $("nClubsBox").hidden=$("nScope").value!=="club";
+    $("nClubs").innerHTML=D.clubs.map(c=>`<button type="button" class="chip" data-c="${esc(c)}" aria-pressed="${nClubs.has(c)}">${esc(c)}</button>`).join("");
+  }
+  $("nClubs").onclick=e=>{const b=e.target.closest("[data-c]");if(!b)return;const c=b.dataset.c;nClubs.has(c)?nClubs.delete(c):nClubs.add(c);drawNewClubs();};
+  $("nScope").onchange=drawNewClubs;
+  // typing an existing address loads its settings, so the form also works for changes
+  $("nEmail").addEventListener("change",()=>{
+    const p=D.people.find(x=>x.email===$("nEmail").value.trim().toLowerCase()); if(!p) return;
+    $("nScope").value=p.scope; nClubs=new Set(p.clubs); $("nCsv").checked=p.can_export; $("nAdmin").checked=p.is_admin; $("nOwner").checked=p.is_owner; drawNewClubs();
+  });
+  $("add").onclick=async()=>{
+    const email=$("nEmail").value.trim().toLowerCase();
+    if(!email){say("err","Vul een e-mailadres in.");$("nEmail").focus();return;}
+    const exists=D.people.some(x=>x.email===email);
+    const ok=await save(email,{scope:$("nScope").value,clubs:[...nClubs],can_export:$("nCsv").checked,
+      ...(isOwner?{is_admin:$("nAdmin").checked,is_owner:$("nOwner").checked}:{})},`${email} ${exists?"gewijzigd":"toegevoegd"}.`);
+    if(ok){$("nEmail").value="";nClubs=new Set();$("nAdmin").checked=$("nOwner").checked=false;$("nCsv").checked=true;$("nScope").value="club";drawNewClubs();}
+  };
+
+  // ---------- table ----------
+  function render(){
+    const covered=new Set(D.people.filter(p=>p.scope==="club").flatMap(p=>p.clubs));
+    const missing=D.clubs.filter(c=>!covered.has(c));
+    $("noMgr").hidden=!missing.length;
+    $("noMgr").innerHTML=`<b>Clubs zonder clubmanager:</b> ${missing.map(esc).join(", ")} — alleen globale managers zien die.`;
+    const f=$("filter").value.trim().toLowerCase();
+    const list=D.people.filter(p=>!f||p.email.includes(f)||p.clubs.some(c=>c.toLowerCase().includes(f)))
+      .sort((a,b)=>(b.is_owner-a.is_owner)||(b.is_admin-a.is_admin)||a.email.localeCompare(b.email));
+    $("rows").innerHTML=list.map(p=>{
+      const me=p.email===D.me.email, protectedRow=(p.is_admin||p.is_owner)&&!isOwner;
+      const when=p.updated_at?new Date(p.updated_at).toLocaleString("nl-BE",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
+      const e=esc(p.email);
+      let html=`<tr data-e="${e}">
+        <td class="email">${e}${p.is_owner?'<span class="badge owner">owner</span>':p.is_admin?'<span class="badge admin">admin</span>':""}${me?'<span class="badge me">jij</span>':""}</td>
+        <td><select data-act="scope" aria-label="Ziet in Resultaten">${["club","global","none"].map(s=>`<option value="${s}"${p.scope===s?" selected":""}>${scopeName[s]}</option>`).join("")}</select></td>
+        <td>${p.scope==="club"?`<div class="chips">${p.clubs.map(c=>`<span class="chip static">${esc(c)}</span>`).join("")}<button type="button" class="chip" data-act="clubs">Clubs ${open.has(p.email)?"▴":"▾"}</button></div>`:p.scope==="global"?"<span class=\"chip static\">alle clubs</span>":"–"}</td>
+        <td class="c"><input type="checkbox" data-act="csv" aria-label="CSV-export" ${p.can_export?"checked":""} ${p.scope==="none"?"disabled title=\"Ziet geen clubs, dus niets te exporteren\"":""}></td>
+        <td class="c"><input type="checkbox" data-act="admin" aria-label="Admin" ${p.is_admin||p.is_owner?"checked":""} ${!isOwner||p.is_owner?"disabled":""} title="${p.is_owner?"Een owner is altijd ook admin":isOwner?"":"Alleen een owner kan dit wijzigen"}"></td>
+        <td class="c"><input type="checkbox" data-act="owner" aria-label="Owner" ${p.is_owner?"checked":""} ${!isOwner?"disabled title=\"Alleen een owner kan dit wijzigen\"":""}></td>
+        <td class="when">${esc(when)}${p.updated_by?`<br>${esc(p.updated_by)}`:""}</td>
+        <td class="c"><button type="button" class="del${sureDel===p.email?" sure":""}" data-act="del" ${protectedRow?"disabled title=\"Alleen een owner kan een admin of owner verwijderen\"":""} aria-label="Verwijder ${e}">${sureDel===p.email?"Zeker?":"✕"}</button></td>
+      </tr>`;
+      if(open.has(p.email)&&p.scope==="club") html+=`<tr class="edit" data-e="${e}"><td></td><td colspan="7"><div class="chips">${D.clubs.map(c=>`<button type="button" class="chip" data-act="club" data-c="${esc(c)}" aria-pressed="${p.clubs.includes(c)}">${esc(c)}</button>`).join("")}</div></td></tr>`;
+      return html;
+    }).join("")||`<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--grey)">Niemand gevonden.</td></tr>`;
+  }
+  $("filter").oninput=render;
+  $("rows").addEventListener("change",async e=>{
+    const t=e.target, email=t.closest("tr")?.dataset.e; if(!email||!t.dataset.act) return;
+    const p=D.people.find(x=>x.email===email);
+    if(t.dataset.act==="scope"){
+      const scope=t.value;
+      if(scope==="club"&&!p.clubs.length){ p.scope="club"; open.add(email); render(); say("","Kies de clubs voor "+email+"."); return; }
+      await save(email,{scope});
+    }
+    if(t.dataset.act==="csv") await save(email,{can_export:t.checked});
+    if(t.dataset.act==="admin") await save(email,{is_admin:t.checked});
+    if(t.dataset.act==="owner") await save(email,{is_owner:t.checked,...(t.checked?{is_admin:true}:{})});
+  });
+  $("rows").addEventListener("click",async e=>{
+    const b=e.target.closest("button[data-act]"); if(!b) return;
+    const email=b.closest("tr").dataset.e, p=D.people.find(x=>x.email===email);
+    if(b.dataset.act==="clubs"){ open.has(email)?open.delete(email):open.add(email); render(); }
+    if(b.dataset.act==="club"){
+      const c=b.dataset.c, clubs=p.clubs.includes(c)?p.clubs.filter(x=>x!==c):[...p.clubs,c];
+      if(!clubs.length){ say("err","Een clubmanager heeft minstens één club. Kies eerst een andere club, of zet “Ziet in Resultaten” op Niets."); return; }
+      await save(email,{scope:"club",clubs});
+    }
+    if(b.dataset.act==="del"){
+      if(sureDel!==email){ sureDel=email; render(); setTimeout(()=>{ if(sureDel===email){ sureDel=null; render(); } },3000); return; }
+      sureDel=null;
+      try{ apply(await api("DELETE","/api/admin/people/"+encodeURIComponent(email))); say("ok",`${email} verwijderd.`); }
+      catch(err){ say("err",err.message); render(); }
+    }
+  });
+
+  // ---------- CSV ----------
+  $("csvOut").onclick=async()=>{
+    try{ const blob=await api("GET","/api/admin/people.csv"); const a=document.createElement("a");
+      a.href=URL.createObjectURL(blob); a.download="huphup-managers.csv"; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); }
+    catch(e){ say("err",e.message); }
+  };
+  $("csvIn").onchange=async()=>{
+    const file=$("csvIn").files[0]; if(!file) return;
+    const text=await file.text(); $("csvIn").value="";
+    try{
+      const r=await api("POST","/api/admin/people.csv"+($("csvReplace").checked?"?replace=1":""),text,"text/csv");
+      apply(r); say("ok",`${r.count} regel(s) geïmporteerd.${r.unknownClubs.length?" Onbekende clubs genegeerd: "+r.unknownClubs.join(", ")+".":""}`);
+    }catch(e){ say("err",e.message); }
+  };
+
+  // ---------- history import ----------
+  let histText=null;
+  const n=x=>Number(x).toLocaleString("nl-BE");
+  const dmy=d=>d?d.split("-").reverse().join("/"):"";
+  function showHist(r){
+    const box=$("histSum"); box.hidden=false;
+    const unknown=Object.entries(r.unknownClubs||{});
+    const parts=[];
+    parts.push(r.dryRun
+      ? `<p class="big">${n(r.toImport)} registraties klaar om te importeren</p>`
+      : `<p class="big">${n(r.inserted)} registraties geïmporteerd ✓</p>`);
+    parts.push(`<p>${n(r.total)} regels in het bestand · ${n(r.people)} coaches · ${dmy(r.from)} tot ${dmy(r.to)}</p>`);
+    const notes=[];
+    if(r.dropped.length) notes.push(`${n(r.dropped.length)} rapport(en) niet meegenomen omdat dezelfde coach later voor hetzelfde dagdeel nog een rapport stuurde`);
+    if(r.alreadyInApp) notes.push(`${n(r.alreadyInApp)} dagdeel/dagdelen overgeslagen: staan al in de app`);
+    if(unknown.length) notes.push(`onbekende club(s), niet geïmporteerd: ${unknown.map(([c,k])=>`${esc(c)} (${k})`).join(", ")}`);
+    if(r.problems.length) notes.push(`${n(r.problems.length)} regel(s) met fouten, niet geïmporteerd`);
+    if(notes.length) parts.push(`<ul>${notes.map(x=>`<li>${x}</li>`).join("")}</ul>`);
+    if(Object.keys(r.perClub).length) parts.push(`<details><summary>Per club</summary><ul>${Object.entries(r.perClub).sort((a,b)=>a[0].localeCompare(b[0],"nl")).map(([c,k])=>`<li>${esc(c)}: ${n(k)}</li>`).join("")}</ul></details>`);
+    if(r.dropped.length) parts.push(`<details><summary>Niet meegenomen rapporten</summary><ul>${r.dropped.map(d=>`<li>regel ${d.line}: ${esc(d.email)}, ${dmy(d.day)} ${d.part}, ${esc(d.club)} → vervangen door regel ${d.keptLine} (${esc(d.keptClub)})</li>`).join("")}</ul></details>`);
+    if(r.problems.length) parts.push(`<details open><summary>Fouten</summary><ul>${r.problems.map(p=>`<li>regel ${p.line}: ${esc(p.reason)}</li>`).join("")}</ul></details>`);
+    if(r.dryRun && r.toImport) parts.push(`<div class="row"><button class="btn primary" id="histGo" type="button">Importeer ${n(r.toImport)} registraties</button><button class="btn ghost" id="histCancel" type="button">Annuleren</button></div>`);
+    box.innerHTML=parts.join("");
+    if($("histGo")) $("histGo").onclick=async()=>{
+      $("histGo").disabled=true; $("histGo").textContent="Bezig…";
+      try{ showHist(await api("POST","/api/admin/entries.csv",histText,"text/csv")); histText=null; say("ok","Historiek geïmporteerd."); }
+      catch(e){ say("err",e.message); $("histGo").disabled=false; $("histGo").textContent="Opnieuw proberen"; }
+    };
+    if($("histCancel")) $("histCancel").onclick=()=>{ box.hidden=true; histText=null; };
+  }
+  $("histIn").onchange=async()=>{
+    const file=$("histIn").files[0]; if(!file) return;
+    histText=await file.text(); $("histIn").value="";
+    try{ showHist(await api("POST","/api/admin/entries.csv?dryrun=1",histText,"text/csv")); say("ok","Proefrun klaar: er is nog niets bewaard."); }
+    catch(e){ say("err",e.message); }
+  };
+
+  drawNewClubs(); render();
+})();
+</script>
+</body>
+</html>
