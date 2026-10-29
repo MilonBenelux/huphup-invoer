@@ -25,7 +25,11 @@ services:
       - key: EXCLUDE_CLUBS
         sync: false        # optional: sub-accounts that are not clubs, e.g. Fysioworld,huphup leeg
       - key: ADMIN_EMAILS
-        sync: false        # e.g. karl.peeters@huphup.be
+        sync: false        # first owner(s) of the Beheer page, e.g. karl.peeters@huphup.be
+      - key: MANAGERS
+        sync: false        # only used once: first import into the Beheer page (or use the Secret File managers.csv)
+      - key: ADMIN_API_KEY
+        generateValue: true  # key for scripts: header x-api-key on /api/admin/... (acts as admin, not owner)
       - key: EXPORT_KEY
         generateValue: true  # key for the Excel link /export.csv?key=...
       - key: EXTRA_FIELD_CLUBS

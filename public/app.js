@@ -84,7 +84,9 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
   $('app').hidden = false; $('userBox').hidden = false;
   $('me').textContent = config.user.name;
   $('logout').onclick = () => msalApp.logoutRedirect({ account });
-  if (config.user.isAdmin) {
+  if (config.user.isManager) $('results').hidden = false; // link to the managers' results page
+  if (config.user.isAdmin) $('beheer').hidden = false;      // link to the Beheer page
+  if (config.user.canExport) {
     $('export').hidden = false;
     $('export').onclick = async () => {
       const blob = await api('GET', '/api/export.csv');
