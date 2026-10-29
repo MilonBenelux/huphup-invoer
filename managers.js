@@ -42,14 +42,15 @@ function parseCsv(text) {
     const cols = line.split(/[;\t]/).map(s => s.trim());
     const email = (cols[0] || '').toLowerCase();
     if (!email.includes('@')) continue;
-    const p = out.get(email) || { email, scope: 'none', clubs: [], can_export: true, is_admin: false, is_owner: false };
+    // is_admin/is_owner stay undefined unless the file has those columns: then an import never changes those rights.
+    const p = out.get(email) || { email, scope: 'none', clubs: [], can_export: true, is_admin: undefined, is_owner: undefined };
     if (cols.length >= 3 && ['none', 'club', 'global'].includes((cols[1] || '').toLowerCase())) {
       // full export format
       p.scope = cols[1].toLowerCase();
       p.clubs = (cols[2] || '').split('|').map(s => s.trim()).filter(Boolean);
       if (cols[3] !== undefined && cols[3] !== '') p.can_export = /^(1|ja|yes|true|x)$/i.test(cols[3]);
-      if (cols[4] !== undefined) p.is_admin = /^(1|ja|yes|true|x)$/i.test(cols[4]);
-      if (cols[5] !== undefined) p.is_owner = /^(1|ja|yes|true|x)$/i.test(cols[5]);
+      if (cols[4] !== undefined && cols[4] !== '') p.is_admin = /^(1|ja|yes|true|x)$/i.test(cols[4]);
+      if (cols[5] !== undefined && cols[5] !== '') p.is_owner = /^(1|ja|yes|true|x)$/i.test(cols[5]);
     } else {
       const club = cols[1] || '';
       if (club.toLowerCase() === 'global') p.scope = 'global';
@@ -89,6 +90,12 @@ async function init(pgPool) {
         [p.email, p.scope, p.clubs, p.can_export !== false, !!p.is_admin, !!p.is_owner]);
     }
     console.log(`Beheer: first import of ${list.length} people (${ADMIN_SEED.length} owner(s) from ADMIN_EMAILS)`);
+  }
+  const { rows: own } = await pool.query('SELECT count(*)::int AS n FROM people WHERE is_owner');
+  if (own[0].n === 0 && ADMIN_SEED.length) {
+    for (const e of ADMIN_SEED) await pool.query(`INSERT INTO people (email, is_admin, is_owner, updated_by) VALUES ($1, true, true, 'ADMIN_EMAILS')
+      ON CONFLICT (email) DO UPDATE SET is_admin=true, is_owner=true, updated_by='ADMIN_EMAILS', updated_at=now()`, [e]);
+    console.log(`Beheer: no owner in the list, made ${ADMIN_SEED.join(', ')} owner (ADMIN_EMAILS)`);
   }
   await reload();
   console.log(`Beheer: ${people.size} people, ${[...people.values()].filter(p => p.is_owner).length} owner(s), ${[...people.values()].filter(p => p.is_admin || p.is_owner).length} admin(s)`);
@@ -137,9 +144,12 @@ async function change(fn) {
   try {
     await client.query('BEGIN');
     await client.query('LOCK TABLE people IN EXCLUSIVE MODE');
+    const count = async () => (await client.query(`SELECT count(*) FILTER (WHERE is_owner)::int AS owners,
+      count(*) FILTER (WHERE is_owner OR is_admin)::int AS admins FROM people`)).rows[0];
+    const before = await count();
     await fn(client);
-    const { rows } = await client.query(`SELECT count(*) FILTER (WHERE is_owner)::int AS owners,
-      count(*) FILTER (WHERE is_owner OR is_admin)::int AS admins FROM people`);
+    const after = await count();
+    const rows = [{ owners: before.owners ? after.owners : 1, admins: before.admins ? after.admins : 1 }];
     if (rows[0].owners < 1) throw new RuleError('Er moet altijd minstens één owner blijven.');
     if (rows[0].admins < 1) throw new RuleError('Er moet altijd minstens één admin blijven.');
     await client.query('COMMIT');
