@@ -22,6 +22,7 @@ for (const [k, v] of Object.entries({ TENANT_ID, CLIENT_ID, DATABASE_URL })) {
 const clubs = require('./clubs'); // one club list: names come from the GHL agency dashboard
 const managers = require('./managers');
 const reference = require('./reference');
+const cplus = require('./cplus'); // Control+ members and revenue (KPI page), from the cplus-report service
 const history = require('./history'); // import of old registrations (CSV) // all-clubs summary figures for the results page // managers, admins and owners (Beheer page)
 const crypto = require('crypto');
 const sameKey = (a, b) => { const x = crypto.createHash('sha256').update(String(a)).digest(), y = crypto.createHash('sha256').update(String(b)).digest(); return crypto.timingSafeEqual(x, y); };
@@ -128,6 +129,7 @@ app.get('/api/config', auth, async (req, res) => {
     user: (() => { const r = managers.rightsFor(req.user.emails); return { name: req.user.name, email: req.user.email,
       isAdmin: r.admin, isOwner: r.owner, canExport: r.export,
       isManager: !!managers.roleFor(req.user.emails, clubs.list().map(c => c.name)) }; })(),
+    kpi: cplus.configured(), // Control+ KPI page available (CPLUS_URL / CPLUS_KEY set)
   });
 });
 
@@ -171,6 +173,34 @@ app.get('/api/results', auth, async (req, res, next) => {
       ...Object.fromEntries(RESULT_FIELDS.map(k => [k, r[column({ key: k })] ?? 0])) })));
     res.setHeader('Cache-Control', 'no-store');
     res.json({ role: { ...role, name: req.user.name }, clubs: allClubs, today, months: RESULT_MONTHS, fields: RESULT_FIELDS, entries: out, ref, elsewhere });
+  } catch (e) { next(e); }
+});
+
+// ---- Control+ KPI page for managers ----
+// Members and revenue per club and month, from the cplus-report service (see cplus.js).
+// Same rule as the results page: a club manager receives the rows of their own clubs only;
+// for other clubs there is just one all-clubs total per month (no per-club figures).
+app.get('/api/kpi', auth, async (req, res, next) => {
+  try {
+    await clubs.ensure();
+    const allClubs = clubs.list().map(c => c.name);
+    const role = managers.roleFor(req.user.emails, allClubs);
+    if (!role) return res.status(403).json({ error: 'Je staat niet op de lijst van managers. Vraag de beheerder om je toe te voegen.' });
+    const today = brusselsNow().date;
+    const to = today.slice(0, 7), from = shiftMonth(to, -(RESULT_MONTHS - 1));
+    let got;
+    try { got = await cplus.fetchRange(from, to); }
+    catch (e) { return res.status(503).json({ error: e.message }); }
+    const rows = cplus.shape(got.data, allClubs);
+    const mine = new Set(role.clubs);
+    const allTotals = {};
+    for (const m of new Set(rows.map(r => r.month))) allTotals[m] = cplus.total(rows.filter(r => r.month === m && !r.error));
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      role: { ...role, name: req.user.name }, today, months: RESULT_MONTHS, fields: cplus.FIELDS,
+      rows: role.type === 'global' ? rows : rows.filter(r => mine.has(r.club)),
+      allTotals, updated: got.data.last_run || null, stale: got.stale,
+    });
   } catch (e) { next(e); }
 });
 

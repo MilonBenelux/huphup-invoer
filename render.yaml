@@ -32,6 +32,10 @@ services:
         generateValue: true  # key for scripts: header x-api-key on /api/admin/... (acts as admin, not owner)
       - key: EXPORT_KEY
         generateValue: true  # key for the Excel link /export.csv?key=...
+      - key: CPLUS_URL
+        sync: false        # URL of the cplus-report service (Control+ figures for the KPI page)
+      - key: CPLUS_KEY
+        sync: false        # that service's API_KEY
       - key: EXTRA_FIELD_CLUBS
         value: Zandhoven   # clubs whose name contains this get the Pelvi fields
 

@@ -122,6 +122,23 @@ Managers sign in as usual. A **Resultaten** link then appears at the top of the 
 - **Club managers** see their own clubs: per club, per employee and per month, with drilldowns. They only receive the shifts entered for their own clubs — also for a coach who works in several clubs, only the shifts in the manager's clubs. Other clubs are reduced on the server to summary figures (all-clubs totals for the averages, and the lowest/highest value per column for the bars); no rows from other clubs reach their browser, not even anonymised. The only thing they learn about another club is its name, in the note *"Werkte deze maand ook in …"* under a coach of theirs who also worked elsewhere that month; no figures from that club.
 - **Global managers** see every club and every person.
 
+## KPI page (Control+ members and revenue)
+
+Managers also get a **KPI** link (next to *Resultaten*); it opens `/kpi.html`. It shows, per club and per month,
+the Control+ figures: clients at the start and end of the month, growth, new, renewed, stopped and blocked
+clients, revenue, and (from Dataverse) visits, unique visitors and active % (unique visitors ÷ clients at end), and (from Net2, daily) badge-bezoeken and badge-bezoekers: card entries by members of "HUPHUP <club> - klanten". Hover over a revenue amount to see the payment methods. Two tabs: **Per club** (one month)
+and **Per maand** (the last 12 months for the chosen club or all your clubs together).
+
+- **Where the numbers come from:** the **cplus-report** service (the Control+ scraper on Render), through its
+  `/api/data` endpoint. This app doesn't log in to Control+ itself.
+- **Who sees what:** the same rule as Resultaten. Club managers get their own clubs only, plus one
+  *Alle clubs* total per month for comparison; global managers see every club.
+- **Club names** are matched with the dashboard list, ignoring upper/lower case and a leading "HUPHUP".
+- **Setup:** on Render, add `CPLUS_URL` (address of the cplus-report service) and `CPLUS_KEY` (its `API_KEY`).
+  Without them the KPI link stays hidden.
+
+API: `GET /api/kpi` (signed in, managers only).
+
 ## Importing history
 
 Registrations made before this app (e.g. the old *rapportages* CSV) are loaded on the **Beheer** page, under **Historiek importeren**:

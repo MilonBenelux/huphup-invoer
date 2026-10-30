@@ -85,6 +85,7 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
   $('me').textContent = config.user.name;
   $('logout').onclick = () => msalApp.logoutRedirect({ account });
   if (config.user.isManager) $('results').hidden = false; // link to the managers' results page
+  if (config.user.isManager && config.kpi) $('kpi').hidden = false; // Control+ KPI page (members and revenue)
   if (config.user.isAdmin) $('beheer').hidden = false;      // link to the Beheer page
   if (config.user.canExport) {
     $('export').hidden = false;

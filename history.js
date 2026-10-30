@@ -57,7 +57,8 @@ function parsePart(s) {
   if (v === 'nm' || v.startsWith('namid') || v === 'avond') return 'NM';
   return null;
 }
-const normClub = s => String(s || '').toLowerCase().replace(/^huphup\s+/, '').replace(/[\s_]+/g, '-').trim();
+// "HUPHUP Dendermonde - Oude Vest", "Dendermonde-Oude Vest" and "dendermonde oude vest" are the same club.
+const normClub = s => String(s || '').toLowerCase().trim().replace(/^huphup\s+/, '').replace(/[\s_-]+/g, '-');
 
 /**
  * Reads the CSV and decides what would be imported. No database access.

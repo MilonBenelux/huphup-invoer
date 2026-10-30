@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>HUPHUP KPI's</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;800&display=swap">
+<style>
+@font-face{font-family:"huphup";src:url(/fonts/huphup.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+/* Same look as resultaten.html: white page, purple header, grey filter band, one table. */
+:root{
+  color-scheme:light;
+  --purple:#7680ff; --purple-dark:#525cd6; --purple-soft:#eef0ff; --orange:#f98d3d; --green:#39c97d; --pink:#f8a3d2;
+  --ink:#161616; --grey:#6f6f6f; --band:#e6e6e6; --line:#ededee; --white:#ffffff; --row:#fafafb;
+  --f-brand:"huphup","Montserrat",Helvetica,Arial,sans-serif;
+  --f-body:"Montserrat",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{background:var(--white);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;margin:0}
+.inner{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button{font:inherit;cursor:pointer}
+button:focus-visible,select:focus-visible,.tip:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.nav{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.nav a,.nav button{color:var(--white);font:inherit;font-weight:700;font-size:13px;background:none;border:0;padding:4px 6px;text-decoration:underline;text-underline-offset:3px}
+.gate{padding-block:40px} .gate p{font-weight:700;font-size:16px;margin:0 0 14px}
+
+header.top{background:var(--purple);color:var(--white)}
+header.top .inner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 26px}
+.logo{font-family:var(--f-brand);font-size:26px;line-height:1}
+.logo span{font-family:var(--f-body);font-size:12px;font-weight:700;background:var(--white);color:var(--purple);border-radius:320px;padding:3px 10px;margin-left:8px;vertical-align:5px}
+.who{background:var(--purple-dark);border-radius:320px;padding:6px 14px;font-size:13px;font-weight:700}
+.title{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px}
+.title h1{font-family:var(--f-brand);font-weight:400;font-size:clamp(30px,5vw,46px);line-height:1;margin:0}
+.title p{margin:0;font-weight:500;opacity:.9}
+
+.band{background:var(--band)}
+.band .inner{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-end;padding-block:16px}
+.lbl{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--grey);margin-bottom:5px}
+.band select{font:inherit;font-weight:700;color:var(--ink);background:var(--white);border:0;border-radius:320px;padding:9px 16px;min-width:0;max-width:100%}
+
+.tabs{display:flex;flex-wrap:wrap;gap:8px;padding-block:18px 12px}
+.tab{border:2px solid var(--purple);background:var(--white);color:var(--purple);border-radius:320px;padding:8px 18px;font-weight:700}
+.tab[aria-selected="true"]{background:var(--purple);color:var(--white)}
+.lead{margin:0 0 12px;color:var(--grey);max-width:80ch}
+.warn{margin:0 0 12px;color:#9a4a00;font-weight:600}
+
+.krow{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:14px}
+.kpi{border-radius:16px;padding:12px 16px;background:var(--purple-soft);min-width:0}
+.kpi .k{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--purple-dark)}
+.kpi .v{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2;white-space:nowrap}
+.kpi .d{font-size:12px;color:var(--grey);font-weight:500}
+.kpi.g{background:#e8f8ef} .kpi.g .k{color:#1e9e5c}
+.kpi.p{background:#fff0f7} .kpi.p .k{color:#b0407c}
+.kpi.o{background:#fff3e6} .kpi.o .k{color:#9a4a00}
+.up{color:#1e9e5c;font-weight:700} .down{color:#d1462f;font-weight:700}
+
+.scroll{overflow-x:auto;border:2px solid var(--line);border-radius:20px}
+table{border-collapse:collapse;width:100%;min-width:900px;font-size:13.5px}
+th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+thead th{white-space:normal;vertical-align:bottom;line-height:1.25}
+th:first-child,td:first-child{text-align:left;padding-left:14px}
+thead th{background:var(--purple);color:var(--white);font-weight:700;font-size:12px;cursor:pointer;user-select:none}
+thead th:hover{background:var(--purple-dark)}
+thead th .arr{font-size:10px;margin-left:2px}
+tbody td:first-child{font-weight:700}
+tr.total td{background:var(--purple-soft);font-weight:800}
+tr.all td{background:var(--row);color:#333;font-weight:600}
+td.err{color:#9a4a00;text-align:left;white-space:normal;font-weight:500}
+td.na{color:#c4c4c4}
+.tip{position:relative;cursor:help;border-bottom:1px dotted var(--grey)}
+.tip .box{display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:20;background:var(--white);border:1px solid var(--line);
+  border-radius:12px;box-shadow:0 8px 24px rgba(30,30,80,.16);padding:8px 12px;font-weight:500;color:var(--ink);text-align:left}
+.tip:hover .box,.tip:focus .box{display:block}
+tr.up-tip .tip .box{top:auto;bottom:calc(100% + 6px)}
+.box div{display:flex;justify-content:space-between;gap:18px;padding:2px 0;font-size:12.5px}
+.box div.t{border-top:1px solid var(--line);margin-top:4px;padding-top:5px;font-weight:700}
+.box div.xh{display:block;color:var(--grey);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:8px}
+.box div.x{color:#9a9a9a;font-style:italic}
+.empty{padding:28px;text-align:center;color:var(--grey)}
+.note{margin:14px 0 40px;color:var(--grey);font-size:12.5px;max-width:90ch}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="inner">
+  <div class="logo">HUpHuP<span>KPI</span></div>
+  <div class="nav"><a href="/">← Invoer</a><a href="/resultaten.html">Resultaten</a><div class="who" id="who"></div><button type="button" id="logout">Afmelden</button></div>
+  <div class="title"><h1>Leden &amp; omzet</h1><p id="sub"></p></div>
+</div></header>
+
+<section class="gate" id="gate"><div class="inner"><p id="gateMsg">Bezig met laden…</p><button class="tab" id="login" type="button" hidden>Aanmelden met Microsoft</button></div></section>
+<div id="app" hidden>
+<section class="band" aria-label="Filters"><div class="inner">
+  <div><label class="lbl" for="month">Maand</label><select id="month"></select></div>
+  <div><label class="lbl" for="scope">Club</label><select id="scope"></select></div>
+</div></section>
+
+<main class="inner">
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tClubs" aria-selected="true">Per club</button>
+    <button class="tab" role="tab" id="tMonths" aria-selected="false">Per maand</button>
+  </div>
+  <p class="warn" id="warn" hidden></p>
+  <p class="lead" id="lead"></p>
+  <div class="krow" id="kpis"></div>
+  <div class="scroll"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+  <p class="note">Bron: Control+ (retentierapport en kassa detail), elk uur bijgewerkt voor de lopende maand.
+    Klanten begin / einde = geldige leden op de eerste / laatste dag van de maand; groei % = groei ÷ klanten begin;
+    omzet = "Totaal in periode" per betaalmethode — beweeg over een bedrag om de betaalmethodes te zien;
+    bezoeken uit Dataverse (meerdere bezoeken van één klant op één dag tellen één keer); actief % = unieke bezoekers ÷ klanten einde;
+    badge-bezoeken = kaarttoegangen in Net2 ("Toegang verleend") door leden van "HUPHUP &lt;club&gt; - klanten", één per lid per dag, dagelijks bijgewerkt.
+    Klik op een kolomtitel om te sorteren.</p>
+</main>
+</div>
+
+<script src="/vendor/msal-browser.js"></script>
+<script>
+function start(D){
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const MON=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
+const [ty,tm,td]=D.today.split("-").map(Number);
+const MONTHS=[]; for(let i=0;i<D.months;i++){const d=new Date(ty,tm-1-i,1);MONTHS.push({key:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`,y:d.getFullYear(),m:d.getMonth()})}
+const mLabel=k=>{const o=MONTHS.find(x=>x.key===k);return o?`${MON[o.m]} ${o.y}`+(k===MONTHS[0].key?` (t/m ${td})`:""):k};
+const F=D.fields;
+const ROLE=D.role;
+const S={month:MONTHS[0].key,scope:"*",tab:"clubs",sort:{col:"name",dir:1}};
+
+/* ---------- formatting ---------- */
+const int=v=>v==null?"–":Math.round(v).toLocaleString("nl-BE");
+const eur=v=>v==null?"–":"€ "+v.toLocaleString("nl-BE",{minimumFractionDigits:2,maximumFractionDigits:2});
+const signed=(v,suf="")=>v==null?"–":`<span class="${v>0?"up":v<0?"down":""}">${v>0?"+":""}${Math.round(v).toLocaleString("nl-BE")}${suf}</span>`;
+function cell(k,r){
+  const v=r[k];
+  if(k==="revenue"){
+    if(v==null) return "–";
+    // largest amounts first; methods left out of the revenue (Korting, Reeds geboekt) last, greyed
+    const ms=Object.entries(r.methods||{}).sort((a,b)=>b[1]-a[1]);
+    const xs=Object.entries(r.excluded||{}).sort((a,b)=>b[1]-a[1]);
+    if(!ms.length&&!xs.length) return eur(v);
+    const line=([m,a],c="")=>`<div class="${c}"><span>${esc(m)}</span><span>${eur(a)}</span></div>`;
+    const left=xs.length?`<div class="xh">Niet meegeteld in totaal</div>${xs.map(x=>line(x,"x")).join("")}`:"";
+    return `<span class="tip" tabindex="0">${eur(v)}<span class="box">${ms.map(x=>line(x)).join("")}<div class="t"><span>Totaal</span><span>${eur(v)}</span></div>${left}</span></span>`;
+  }
+  if(k==="growth") return signed(v);
+  if(k==="growth_pct") return signed(v,"%");
+  if(k==="active_pct") return v==null?"–":`${v}%`;
+  return int(v);
+}
+
+/* ---------- data ---------- */
+const scopeClubs=()=>S.scope==="*"?ROLE.clubs:[S.scope];
+const rowsFor=(month,clubs)=>D.rows.filter(r=>r.month===month&&clubs.includes(r.club));
+function total(rows){
+  const ok=rows.filter(r=>!r.error), o={methods:{},n:ok.length};
+  for(const k of [...F.map(f=>f.key),"net2_accesses"]){ if(k==="growth_pct"||k==="active_pct") continue;
+    const nums=ok.map(r=>r[k]).filter(v=>typeof v==="number");
+    o[k]=nums.length?nums.reduce((a,b)=>a+b,0):null; }
+  o.growth_pct=o.start?Math.round(100*o.growth/o.start):null;
+  const both=ok.filter(r=>typeof r.unique_visitors==="number"&&r.end);
+  o.active_pct=both.length?Math.round(100*both.reduce((a,r)=>a+r.unique_visitors,0)/both.reduce((a,r)=>a+r.end,0)):null;
+  // "PayConiq" and "Payconiq" from different clubs become one line (first spelling wins)
+  const add=(acc,items)=>{for(const [m,a] of Object.entries(items||{})){const k=m.trim().toLowerCase(),c=acc[k]||[m.trim(),0];acc[k]=[c[0],c[1]+a]}};
+  const ms={},xs={};
+  for(const r of ok){add(ms,r.methods);add(xs,r.excluded)}
+  o.methods=Object.fromEntries(Object.values(ms)); o.excluded=Object.fromEntries(Object.values(xs));
+  return o;
+}
+
+/* ---------- render ---------- */
+function head(first){
+  const arr=c=>S.sort.col===c?`<span class="arr">${S.sort.dir>0?"▲":"▼"}</span>`:"";
+  return `<tr><th data-sort="name">${first}${arr("name")}</th>${F.map(f=>`<th data-sort="${f.key}">${esc(f.label)}${arr(f.key)}</th>`).join("")}</tr>`;
+}
+const line=(name,r,cls="")=>`<tr class="${cls}"><td>${name}</td>${F.map(f=>`<td>${cell(f.key,r)}</td>`).join("")}</tr>`;
+function sortRows(list,nameOf){
+  const {col,dir}=S.sort;
+  return list.sort((a,b)=>{ if(col==="name") return dir*nameOf(a).localeCompare(nameOf(b),"nl");
+    const x=a[col]??-Infinity,y=b[col]??-Infinity; return dir*(x-y); });
+}
+function kpis(t){
+  const meth=Object.entries(t.methods||{}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([m,a])=>`${esc(m)} ${eur(a)}`).join(" · ");
+  $("kpis").innerHTML=[
+    `<div class="kpi"><div class="k">Klanten einde</div><div class="v">${int(t.end)}</div><div class="d">begin ${int(t.start)} · groei ${signed(t.growth)} (${signed(t.growth_pct,"%")})</div></div>`,
+    `<div class="kpi g"><div class="k">Ingeschreven</div><div class="v">${int(t.new)}</div><div class="d">geheractiveerd ${int(t.renewed)}</div></div>`,
+    `<div class="kpi p"><div class="k">Uitgeschreven</div><div class="v">${int(t.stopped)}</div><div class="d">geblokkeerd ${int(t.blocked)}</div></div>`,
+    `<div class="kpi o"><div class="k">Omzet</div><div class="v">${eur(t.revenue)}</div><div class="d">${meth}</div></div>`,
+    `<div class="kpi"><div class="k">Bezoeken</div><div class="v">${int(t.visits)}</div><div class="d">unieke bezoekers ${int(t.unique_visitors)} · actief ${t.active_pct==null?"–":t.active_pct+"%"}</div></div>`,
+    `<div class="kpi o"><div class="k">Badge-bezoeken</div><div class="v">${int(t.net2_visits)}</div><div class="d">badge-bezoekers ${int(t.net2_unique)} · kaarttoegangen ${int(t.net2_accesses)}</div></div>`].join("");
+}
+function render(){
+  for(const t of ["Clubs","Months"]) $("t"+t).setAttribute("aria-selected",S.tab===t.toLowerCase());
+  $("month").disabled=S.tab==="months";
+  const clubs=scopeClubs(), many=clubs.length>1;
+  const scopeName=S.scope==="*"?(ROLE.type==="global"?"Alle clubs":"Mijn clubs"):esc(S.scope);
+  let body="";
+  if(S.tab==="clubs"){
+    const rows=rowsFor(S.month,clubs), t=total(rows);
+    kpis(t);
+    $("lead").textContent=`${mLabel(S.month)} · ${S.scope==="*"?(ROLE.type==="global"?"alle clubs":"je clubs"):S.scope}`;
+    $("tbl").tHead.innerHTML=head("Club");
+    const missing=clubs.filter(c=>!rows.some(r=>r.club===c));
+    body=sortRows(rows.slice(),r=>r.club).map((r,i,arr)=>r.error
+      ?`<tr><td>${esc(r.club)}</td><td class="err" colspan="${F.length}">Control+: ${esc(r.error)}</td></tr>`
+      :line(esc(r.club),r,i>=arr.length-3?"up-tip":"")).join("");
+    body+=missing.map(c=>`<tr><td>${esc(c)}</td><td class="na" colspan="${F.length}" style="text-align:left">geen Control+-gegevens voor deze maand</td></tr>`).join("");
+    if(many||!rows.length) body+=line(scopeName,t,"total up-tip");
+    const all=D.allTotals[S.month];
+    if(ROLE.type!=="global"&&all) body+=line("Alle clubs <small>(ter vergelijking)</small>",all,"all up-tip");
+  }else{
+    $("lead").textContent=`Laatste ${D.months} maanden · ${S.scope==="*"?(ROLE.type==="global"?"alle clubs":"je clubs samen"):S.scope} · de blokken tonen ${mLabel(MONTHS[0].key)}`;
+    $("tbl").tHead.innerHTML=head("Maand");
+    const list=MONTHS.map(m=>({...total(rowsFor(m.key,clubs)),key:m.key}));
+    kpis(list[0]);
+    const nameOf=r=>r.key;
+    body=sortRows(list,nameOf).map((r,i,arr)=>r.n?line(esc(mLabel(r.key)),r,i>=arr.length-3?"up-tip":"")
+      :`<tr><td>${esc(mLabel(r.key))}</td><td class="na" colspan="${F.length}" style="text-align:left">nog geen gegevens</td></tr>`).join("");
+  }
+  $("tbl").tBodies[0].innerHTML=body||`<tr><td class="empty" colspan="${F.length+1}">Geen gegevens.</td></tr>`;
+}
+
+/* ---------- controls ---------- */
+$("who").textContent=ROLE.name;
+$("sub").textContent="Uit Control+, Dataverse en Net2"+(D.updated?` · bijgewerkt ${D.updated.replace("T"," ").slice(0,16)}`:"");
+if(D.stale){$("warn").hidden=false;$("warn").textContent="De Control+-dienst is even niet bereikbaar: dit zijn de laatst opgehaalde cijfers.";}
+$("month").innerHTML=MONTHS.map(m=>`<option value="${m.key}">${mLabel(m.key)}</option>`).join("");
+$("scope").innerHTML=`<option value="*">${ROLE.type==="global"?"Alle clubs":"Al mijn clubs"}</option>`+ROLE.clubs.map(c=>`<option>${esc(c)}</option>`).join("");
+$("month").onchange=e=>{S.month=e.target.value;render()};
+$("scope").onchange=e=>{S.scope=e.target.value;render()};
+$("tClubs").onclick=()=>{S.tab="clubs";S.sort={col:"name",dir:1};render()};
+$("tMonths").onclick=()=>{S.tab="months";S.sort={col:"name",dir:-1};render()};
+$("tbl").addEventListener("click",e=>{const th=e.target.closest("th[data-sort]"); if(!th) return;
+  const c=th.dataset.sort; S.sort=S.sort.col===c?{col:c,dir:-S.sort.dir}:{col:c,dir:c==="name"?1:-1}; render();});
+render();
+}
+
+/* ---------- sign-in (same Microsoft app as the entry form) ---------- */
+(async function(){
+  const $=id=>document.getElementById(id);
+  const gate=t=>{$("gate").hidden=false;$("app").hidden=true;$("gateMsg").textContent=t;};
+  try{
+    const pub=await fetch("/api/public-config").then(r=>r.json());
+    const msalApp=new msal.PublicClientApplication({auth:{clientId:pub.clientId,authority:`https://login.microsoftonline.com/${pub.tenantId}`,redirectUri:location.origin+"/",postLogoutRedirectUri:location.origin+"/"},cache:{cacheLocation:"localStorage"}});
+    await msalApp.initialize();
+    await msalApp.handleRedirectPromise().catch(()=>null);
+    const account=msalApp.getAllAccounts()[0];
+    const login=()=>msalApp.loginRedirect({scopes:[pub.scope],redirectStartPage:location.href});
+    if(!account){gate("Meld je aan om de KPI's te zien.");$("login").hidden=false;$("login").onclick=login;return;}
+    $("logout").onclick=()=>msalApp.logoutRedirect({account});
+    let token;
+    try{token=(await msalApp.acquireTokenSilent({scopes:[pub.scope],account})).accessToken}
+    catch(e){if(e instanceof msal.InteractionRequiredAuthError){return msalApp.acquireTokenRedirect({scopes:[pub.scope],account,redirectStartPage:location.href})}throw e}
+    const res=await fetch("/api/kpi",{headers:{Authorization:"Bearer "+token}});
+    const D=await res.json();
+    if(!res.ok){gate(D.error||"Er ging iets mis.");return;}
+    $("gate").hidden=true;$("app").hidden=false;
+    start(D);
+  }catch(e){gate("De KPI's konden niet geladen worden. Probeer het opnieuw.");console.error(e)}
+})();
+</script>
+<script>
+// Hover boxes are placed relative to the window, so the table's scroll area can't cut them off;
+// they open below the amount, or above it when there is no room below.
+function placeTip(t){const b=t.querySelector('.box');if(!b)return;
+ b.style.cssText='position:fixed;display:block;visibility:hidden;right:auto;bottom:auto';
+ const r=t.getBoundingClientRect(),bw=b.offsetWidth,bh=b.offsetHeight;
+ let top=r.bottom+6;if(top+bh>innerHeight-8&&r.top-bh-6>8)top=r.top-bh-6;
+ const left=Math.max(8,Math.min(r.right-bw,innerWidth-bw-8));
+ b.style.cssText=`position:fixed;top:${top}px;left:${left}px;right:auto;bottom:auto`;}
+document.addEventListener('mouseover',e=>{const t=e.target.closest('.tip');if(t&&!t.contains(e.relatedTarget))placeTip(t)});
+document.addEventListener('focusin',e=>{const t=e.target.closest('.tip');if(t)placeTip(t)});
+addEventListener('scroll',()=>document.querySelectorAll('.tip:hover,.tip:focus').forEach(placeTip),true);
+</script>
+</body>
+</html>
