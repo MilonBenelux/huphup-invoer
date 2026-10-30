@@ -15,21 +15,17 @@ const TTL_MS = 5 * 60 * 1000;
 // Column order and labels on the KPI page (keys = the cplus-report API keys)
 const FIELDS = [
   { key: 'start', label: 'Klanten begin' },
-  { key: 'end', label: 'Klanten einde' },
-  { key: 'growth', label: 'Groei' },
+  { key: 'end', label: 'Klant-totaal' },
+  { key: 'growth', label: 'Groei' },              // hover: ingeschreven / geheractiveerd / uitgeschreven
   { key: 'growth_pct', label: 'Groei %' },
-  { key: 'new', label: 'Ingeschreven' },
-  { key: 'renewed', label: 'Geheractiveerd' },
-  { key: 'stopped', label: 'Uitgeschreven' },
-  { key: 'blocked', label: 'Geblokkeerd' },
-  { key: 'revenue', label: 'Omzet' },
-  { key: 'visits', label: 'Bezoeken' },
-  { key: 'unique_visitors', label: 'Unieke bezoekers' },
-  { key: 'active_pct', label: 'Actief %' }, // unique visitors ÷ clients at end (computed here)
-  { key: 'net2_visits', label: 'Badge-bezoeken' },     // Net2: card entries by "HUPHUP <club> - klanten", 1 per member per day
-  { key: 'net2_unique', label: 'Badge-bezoekers' },     // Net2: members who badged in at least once
+  { key: 'revenue', label: 'Omzet' },             // hover: payment methods + vs previous month
+  { key: 'visits', label: 'Trainingen' },
+  { key: 'unique_visitors', label: 'Unieke sporters' },
+  { key: 'active_pct', label: 'Actief %' },       // unique visitors ÷ clients at end (computed here)
+  { key: 'net2_visits', label: 'Onbemande trainingen' }, // Net2: card entries by "HUPHUP <club> - klanten", 1 per member per day
+  { key: 'net2_unique', label: 'Onbemande sporters' },   // Net2: members who badged in at least once
 ];
-const EXTRA = ['net2_accesses']; // summed, shown in the tile (all card entries)
+const EXTRA = ['new', 'renewed', 'stopped']; // summed and shown in the growth hover / tile, not as a column
 const COMPUTED = ['growth_pct', 'active_pct'];
 const activePct = (uv, end) => (typeof uv === 'number' && end ? Math.round(100 * uv / end) : null);
 

@@ -59,6 +59,14 @@ header.top .inner{display:flex;flex-wrap:wrap;align-items:center;justify-content
 table{border-collapse:collapse;width:100%;min-width:900px;font-size:13.5px}
 th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 thead th{white-space:normal;vertical-align:bottom;line-height:1.25}
+th.sep,td.sep{border-left:2px solid var(--line);padding-left:12px}
+thead th.sep{border-left-color:rgba(255,255,255,.45)}
+.ct{font-size:.72em;opacity:.75}
+.kpi .v small{font-size:15px;font-weight:700}
+.dbar{position:relative;display:inline-block;vertical-align:middle;width:46px;height:8px;background:var(--line);border-radius:5px;margin-right:8px;overflow:hidden}
+.dbar::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--grey);opacity:.5}
+.dbar span{position:absolute;top:0;bottom:0}
+.dbar .pos{background:var(--green);border-radius:0 5px 5px 0} .dbar .neg{background:#e5484d;border-radius:5px 0 0 5px}
 th:first-child,td:first-child{text-align:left;padding-left:14px}
 thead th{background:var(--purple);color:var(--white);font-weight:700;font-size:12px;cursor:pointer;user-select:none}
 thead th:hover{background:var(--purple-dark)}
@@ -105,11 +113,12 @@ tr.up-tip .tip .box{top:auto;bottom:calc(100% + 6px)}
   <p class="lead" id="lead"></p>
   <div class="krow" id="kpis"></div>
   <div class="scroll"><table id="tbl"><thead></thead><tbody></tbody></table></div>
-  <p class="note">Bron: Control+ (retentierapport en kassa detail), elk uur bijgewerkt voor de lopende maand.
-    Klanten begin / einde = geldige leden op de eerste / laatste dag van de maand; groei % = groei ÷ klanten begin;
-    omzet = "Totaal in periode" per betaalmethode — beweeg over een bedrag om de betaalmethodes te zien;
-    bezoeken uit Dataverse (meerdere bezoeken van één klant op één dag tellen één keer); actief % = unieke bezoekers ÷ klanten einde;
-    badge-bezoeken = kaarttoegangen in Net2 ("Toegang verleend") door leden van "HUPHUP &lt;club&gt; - klanten", één per lid per dag, dagelijks bijgewerkt.
+  <p class="note">Bron: Control+ (retentierapport en kassa detail, elk uur bijgewerkt), Dataverse (trainingen) en Net2 (onbemande trainingen, dagelijks bijgewerkt).
+    Klanten begin / Klant-totaal = geldige leden op de eerste / laatste dag van de maand; groei = ingeschreven + geheractiveerd − uitgeschreven
+    (beweeg over de groei voor de opsplitsing); groei % = groei ÷ klanten begin.
+    Omzet = "Totaal in periode" per betaalmethode, zonder kortingen en dergelijke — beweeg over een bedrag voor de betaalmethodes, de omzet per klant en de vergelijking met de vorige maand.
+    Trainingen: meerdere bezoeken van één klant op één dag tellen één keer; actief % = unieke sporters ÷ klant-totaal.
+    Onbemande trainingen = kaarttoegangen in Net2 ("Toegang verleend") door leden van "HUPHUP &lt;club&gt; - klanten", één per lid per dag.
     Klik op een kolomtitel om te sorteren.</p>
 </main>
 </div>
@@ -130,7 +139,21 @@ const S={month:MONTHS[0].key,scope:"*",tab:"clubs",sort:{col:"name",dir:1}};
 /* ---------- formatting ---------- */
 const int=v=>v==null?"–":Math.round(v).toLocaleString("nl-BE");
 const eur=v=>v==null?"–":"€ "+v.toLocaleString("nl-BE",{minimumFractionDigits:2,maximumFractionDigits:2});
-const signed=(v,suf="")=>v==null?"–":`<span class="${v>0?"up":v<0?"down":""}">${v>0?"+":""}${Math.round(v).toLocaleString("nl-BE")}${suf}</span>`;
+// € 12.345,67 with the cents smaller
+const eurH=v=>{if(v==null)return "–";const [w,c]=eur(v).split(",");return `${w}<span class="ct">,${c}</span>`};
+const signed=(v,suf="")=>{if(v==null)return "–";const r=Math.round(v)||0;return `<span class="${r>0?"up":r<0?"down":""}">${r>0?"+":""}${r.toLocaleString("nl-BE")}${suf}</span>`};
+const signedEur=v=>v==null?"–":`<span class="${v>0?"up":v<0?"down":""}">${v>0?"+":v<0?"−":""}${eurH(Math.abs(v))}</span>`;
+const dec1=v=>v==null||!isFinite(v)?"–":(Math.round(v*10)/10).toLocaleString("nl-BE");
+const EXTRA=["new","renewed","stopped"];  // not columns: shown in the growth hover and tile
+const prevKey=k=>{const [y,m]=k.split("-").map(Number);const d=new Date(y,m-2,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`};
+let GMAX=1; // largest |growth| in the table being drawn (scale of the growth bars)
+
+// revenue compared with the previous month: "+€ 1.234,00 (+5%)"
+function revDelta(r){
+  if(r.revenue==null||r.prevRevenue==null) return null;
+  const d=r.revenue-r.prevRevenue, pct=r.prevRevenue?Math.round(100*d/r.prevRevenue):null;
+  return `${signedEur(d)}${pct==null?"":` (${signed(pct,"%")})`}`;
+}
 function cell(k,r){
   const v=r[k];
   if(k==="revenue"){
@@ -138,12 +161,24 @@ function cell(k,r){
     // largest amounts first; methods left out of the revenue (Korting, Reeds geboekt) last, greyed
     const ms=Object.entries(r.methods||{}).sort((a,b)=>b[1]-a[1]);
     const xs=Object.entries(r.excluded||{}).sort((a,b)=>b[1]-a[1]);
-    if(!ms.length&&!xs.length) return eur(v);
-    const line=([m,a],c="")=>`<div class="${c}"><span>${esc(m)}</span><span>${eur(a)}</span></div>`;
+    const line=([m,a],c="")=>`<div class="${c}"><span>${esc(m)}</span><span>${eurH(a)}</span></div>`;
     const left=xs.length?`<div class="xh">Niet meegeteld in totaal</div>${xs.map(x=>line(x,"x")).join("")}`:"";
-    return `<span class="tip" tabindex="0">${eur(v)}<span class="box">${ms.map(x=>line(x)).join("")}<div class="t"><span>Totaal</span><span>${eur(v)}</span></div>${left}</span></span>`;
+    const delta=revDelta(r);
+    const cmp=delta?`<div class="xh">Vorige maand</div><div><span>${eurH(r.prevRevenue)}</span><span>${delta}</span></div>`
+      +(r.month===MONTHS[0].key||r.key===MONTHS[0].key?`<div class="x"><span>lopende maand, nog niet volledig</span><span></span></div>`:""):"";
+    const per=r.end?`<div><span>Per klant</span><span>${eurH(v/r.end)}</span></div>`:"";
+    return `<span class="tip" tabindex="0">${eurH(v)}<span class="box">${ms.map(x=>line(x)).join("")}<div class="t"><span>Totaal</span><span>${eurH(v)}</span></div>${per}${cmp}${left}</span></span>`;
   }
-  if(k==="growth") return signed(v);
+  if(k==="growth"){
+    if(v==null) return "–";
+    const w=Math.min(50,50*Math.abs(v)/GMAX);
+    const bar=`<span class="dbar"><span class="${v>=0?"pos":"neg"}" style="${v>=0?"left":"right"}:50%;width:${w}%"></span></span>`;
+    const box=`<span class="box"><div><span>Ingeschreven</span><span>${signed(r.new)}</span></div>`
+      +`<div><span>Geheractiveerd</span><span>${signed(r.renewed)}</span></div>`
+      +`<div><span>Uitgeschreven</span><span>${r.stopped==null?"–":signed(-r.stopped)}</span></div>`
+      +`<div class="t"><span>Netto groei</span><span>${signed(v)}</span></div></span>`;
+    return `<span class="tip" tabindex="0">${bar}${signed(v)}${box}</span>`;
+  }
   if(k==="growth_pct") return signed(v,"%");
   if(k==="active_pct") return v==null?"–":`${v}%`;
   return int(v);
@@ -154,7 +189,7 @@ const scopeClubs=()=>S.scope==="*"?ROLE.clubs:[S.scope];
 const rowsFor=(month,clubs)=>D.rows.filter(r=>r.month===month&&clubs.includes(r.club));
 function total(rows){
   const ok=rows.filter(r=>!r.error), o={methods:{},n:ok.length};
-  for(const k of [...F.map(f=>f.key),"net2_accesses"]){ if(k==="growth_pct"||k==="active_pct") continue;
+  for(const k of [...F.map(f=>f.key),...EXTRA]){ if(k==="growth_pct"||k==="active_pct") continue;
     const nums=ok.map(r=>r[k]).filter(v=>typeof v==="number");
     o[k]=nums.length?nums.reduce((a,b)=>a+b,0):null; }
   o.growth_pct=o.start?Math.round(100*o.growth/o.start):null;
@@ -167,27 +202,31 @@ function total(rows){
   o.methods=Object.fromEntries(Object.values(ms)); o.excluded=Object.fromEntries(Object.values(xs));
   return o;
 }
+// revenue of the same club / selection in the previous month (for the revenue hover)
+const prevRev=(clubs,month)=>{const t=total(rowsFor(prevKey(month),clubs));return t.n?t.revenue:null};
 
 /* ---------- render ---------- */
 function head(first){
   const arr=c=>S.sort.col===c?`<span class="arr">${S.sort.dir>0?"▲":"▼"}</span>`:"";
-  return `<tr><th data-sort="name">${first}${arr("name")}</th>${F.map(f=>`<th data-sort="${f.key}">${esc(f.label)}${arr(f.key)}</th>`).join("")}</tr>`;
+  return `<tr><th data-sort="name">${first}${arr("name")}</th>${F.map(f=>`<th data-sort="${f.key}" class="${kcls(f.key)}">${esc(f.label)}${arr(f.key)}</th>`).join("")}</tr>`;
 }
-const line=(name,r,cls="")=>`<tr class="${cls}"><td>${name}</td>${F.map(f=>`<td>${cell(f.key,r)}</td>`).join("")}</tr>`;
+// a line before "Omzet", "Trainingen" and "Onbemande trainingen"
+const kcls=k=>(k==="revenue"||k==="visits"||k==="net2_visits"?"sep":"");
+const line=(name,r,cls="")=>`<tr class="${cls}"><td>${name}</td>${F.map(f=>`<td class="${kcls(f.key)}">${cell(f.key,r)}</td>`).join("")}</tr>`;
 function sortRows(list,nameOf){
   const {col,dir}=S.sort;
   return list.sort((a,b)=>{ if(col==="name") return dir*nameOf(a).localeCompare(nameOf(b),"nl");
     const x=a[col]??-Infinity,y=b[col]??-Infinity; return dir*(x-y); });
 }
-function kpis(t){
-  const meth=Object.entries(t.methods||{}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([m,a])=>`${esc(m)} ${eur(a)}`).join(" · ");
+function kpis(t,month){
+  const delta=revDelta(t);
+  const perSporter=t.visits!=null&&t.unique_visitors?t.visits/t.unique_visitors:null;
   $("kpis").innerHTML=[
-    `<div class="kpi"><div class="k">Klanten einde</div><div class="v">${int(t.end)}</div><div class="d">begin ${int(t.start)} · groei ${signed(t.growth)} (${signed(t.growth_pct,"%")})</div></div>`,
-    `<div class="kpi g"><div class="k">Ingeschreven</div><div class="v">${int(t.new)}</div><div class="d">geheractiveerd ${int(t.renewed)}</div></div>`,
-    `<div class="kpi p"><div class="k">Uitgeschreven</div><div class="v">${int(t.stopped)}</div><div class="d">geblokkeerd ${int(t.blocked)}</div></div>`,
-    `<div class="kpi o"><div class="k">Omzet</div><div class="v">${eur(t.revenue)}</div><div class="d">${meth}</div></div>`,
-    `<div class="kpi"><div class="k">Bezoeken</div><div class="v">${int(t.visits)}</div><div class="d">unieke bezoekers ${int(t.unique_visitors)} · actief ${t.active_pct==null?"–":t.active_pct+"%"}</div></div>`,
-    `<div class="kpi o"><div class="k">Badge-bezoeken</div><div class="v">${int(t.net2_visits)}</div><div class="d">badge-bezoekers ${int(t.net2_unique)} · kaarttoegangen ${int(t.net2_accesses)}</div></div>`].join("");
+    `<div class="kpi"><div class="k">Klant-totaal</div><div class="v">${int(t.end)}</div><div class="d">begin ${int(t.start)}</div></div>`,
+    `<div class="kpi g"><div class="k">Groei</div><div class="v">${signed(t.growth)} <small>${t.growth_pct==null?"":signed(t.growth_pct,"%")}</small></div><div class="d">ingeschreven ${int(t.new)} · geheractiveerd ${int(t.renewed)} · uitgeschreven ${int(t.stopped)}</div></div>`,
+    `<div class="kpi o"><div class="k">Omzet</div><div class="v">${eurH(t.revenue)}</div><div class="d">${delta?`${delta} t.o.v. vorige maand${month===MONTHS[0].key?" (lopende maand)":""}`:""}${t.revenue!=null&&t.end?` · ${eurH(t.revenue/t.end)} per klant`:""}</div></div>`,
+    `<div class="kpi"><div class="k">Trainingen</div><div class="v">${int(t.visits)}</div><div class="d">unieke sporters ${int(t.unique_visitors)} · ${dec1(perSporter)} per sporter · actief ${t.active_pct==null?"–":t.active_pct+"%"}</div></div>`,
+    `<div class="kpi p"><div class="k">Onbemande trainingen</div><div class="v">${int(t.net2_visits)}</div><div class="d">onbemande sporters ${int(t.net2_unique)}</div></div>`].join("");
 }
 function render(){
   for(const t of ["Clubs","Months"]) $("t"+t).setAttribute("aria-selected",S.tab===t.toLowerCase());
@@ -196,8 +235,10 @@ function render(){
   const scopeName=S.scope==="*"?(ROLE.type==="global"?"Alle clubs":"Mijn clubs"):esc(S.scope);
   let body="";
   if(S.tab==="clubs"){
-    const rows=rowsFor(S.month,clubs), t=total(rows);
-    kpis(t);
+    const rows=rowsFor(S.month,clubs).map(r=>({...r,prevRevenue:prevRev([r.club],S.month)}));
+    const t={...total(rows),prevRevenue:prevRev(clubs,S.month),month:S.month};
+    kpis(t,S.month);
+    GMAX=Math.max(1,...rows.map(r=>Math.abs(r.growth||0)));
     $("lead").textContent=`${mLabel(S.month)} · ${S.scope==="*"?(ROLE.type==="global"?"alle clubs":"je clubs"):S.scope}`;
     $("tbl").tHead.innerHTML=head("Club");
     const missing=clubs.filter(c=>!rows.some(r=>r.club===c));
@@ -205,14 +246,18 @@ function render(){
       ?`<tr><td>${esc(r.club)}</td><td class="err" colspan="${F.length}">Control+: ${esc(r.error)}</td></tr>`
       :line(esc(r.club),r,i>=arr.length-3?"up-tip":"")).join("");
     body+=missing.map(c=>`<tr><td>${esc(c)}</td><td class="na" colspan="${F.length}" style="text-align:left">geen Control+-gegevens voor deze maand</td></tr>`).join("");
-    if(many||!rows.length) body+=line(scopeName,t,"total up-tip");
+    if(many||!rows.length){GMAX=Math.max(GMAX,Math.abs(t.growth||0)); body+=line(scopeName,t,"total up-tip");}
     const all=D.allTotals[S.month];
-    if(ROLE.type!=="global"&&all) body+=line("Alle clubs <small>(ter vergelijking)</small>",all,"all up-tip");
+    if(ROLE.type!=="global"&&all){
+      const pa=D.allTotals[prevKey(S.month)];
+      body+=line("Alle clubs <small>(ter vergelijking)</small>",{...all,prevRevenue:pa?pa.revenue:null,month:S.month},"all up-tip");
+    }
   }else{
     $("lead").textContent=`Laatste ${D.months} maanden · ${S.scope==="*"?(ROLE.type==="global"?"alle clubs":"je clubs samen"):S.scope} · de blokken tonen ${mLabel(MONTHS[0].key)}`;
     $("tbl").tHead.innerHTML=head("Maand");
-    const list=MONTHS.map(m=>({...total(rowsFor(m.key,clubs)),key:m.key}));
-    kpis(list[0]);
+    const list=MONTHS.map(m=>({...total(rowsFor(m.key,clubs)),key:m.key,prevRevenue:prevRev(clubs,m.key)}));
+    kpis(list[0],MONTHS[0].key);
+    GMAX=Math.max(1,...list.map(r=>Math.abs(r.growth||0)));
     const nameOf=r=>r.key;
     body=sortRows(list,nameOf).map((r,i,arr)=>r.n?line(esc(mLabel(r.key)),r,i>=arr.length-3?"up-tip":"")
       :`<tr><td>${esc(mLabel(r.key))}</td><td class="na" colspan="${F.length}" style="text-align:left">nog geen gegevens</td></tr>`).join("");
