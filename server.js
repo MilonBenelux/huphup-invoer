@@ -199,7 +199,7 @@ app.get('/api/kpi', auth, async (req, res, next) => {
     res.json({
       role: { ...role, name: req.user.name }, today, months: RESULT_MONTHS, fields: cplus.FIELDS,
       rows: role.type === 'global' ? rows : rows.filter(r => mine.has(r.club)),
-      allTotals, updated: got.data.last_run || null, stale: got.stale,
+      allTotals, updated: { control_plus: got.data.last_run || null, ...(got.data.updated || {}) }, stale: got.stale,
     });
   } catch (e) { next(e); }
 });

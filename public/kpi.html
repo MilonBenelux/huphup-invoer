@@ -87,6 +87,7 @@ tr.up-tip .tip .box{top:auto;bottom:calc(100% + 6px)}
 .box div.x{color:#9a9a9a;font-style:italic}
 .empty{padding:28px;text-align:center;color:var(--grey)}
 .note{margin:14px 0 40px;color:var(--grey);font-size:12.5px;max-width:90ch}
+.upd{margin:-6px 0 12px;font-size:12.5px;color:var(--grey)}
 </style>
 </head>
 <body>
@@ -111,9 +112,10 @@ tr.up-tip .tip .box{top:auto;bottom:calc(100% + 6px)}
   </div>
   <p class="warn" id="warn" hidden></p>
   <p class="lead" id="lead"></p>
+  <p class="upd" id="upd"></p>
   <div class="krow" id="kpis"></div>
   <div class="scroll"><table id="tbl"><thead></thead><tbody></tbody></table></div>
-  <p class="note">Bron: Control+ (retentierapport en kassa detail, elk uur bijgewerkt), Dataverse (trainingen) en Net2 (onbemande trainingen, dagelijks bijgewerkt).
+  <p class="note">Bron: Control+ (retentierapport en kassa detail), Dataverse (trainingen) en Net2 (onbemande trainingen), elke dag om 5.30 u bijgewerkt.
     Klanten begin / Klant-totaal = geldige leden op de eerste / laatste dag van de maand; groei = ingeschreven + geheractiveerd − uitgeschreven
     (beweeg over de groei voor de opsplitsing); groei % = groei ÷ klanten begin.
     Omzet = "Totaal in periode" per betaalmethode, zonder kortingen en dergelijke — beweeg over een bedrag voor de betaalmethodes, de omzet per klant en de vergelijking met de vorige maand.
@@ -267,7 +269,12 @@ function render(){
 
 /* ---------- controls ---------- */
 $("who").textContent=ROLE.name;
-$("sub").textContent="Uit Control+, Dataverse en Net2"+(D.updated?` · bijgewerkt ${D.updated.replace("T"," ").slice(0,16)}`:"");
+$("sub").textContent="Uit Control+, Dataverse en Net2";
+{ // last refresh per source (all daily at 05:30)
+  const u=D.updated&&typeof D.updated==="object"?D.updated:{control_plus:D.updated};
+  const when=v=>{if(!v)return "–";const d=new Date(v);return isNaN(d)?"–":d.toLocaleString("nl-BE",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})};
+  $("upd").textContent=`Bijgewerkt: Control+ ${when(u.control_plus)} · trainingen ${when(u.visits)} · onbemande trainingen ${when(u.net2)}`;
+}
 if(D.stale){$("warn").hidden=false;$("warn").textContent="De Control+-dienst is even niet bereikbaar: dit zijn de laatst opgehaalde cijfers.";}
 $("month").innerHTML=MONTHS.map(m=>`<option value="${m.key}">${mLabel(m.key)}</option>`).join("");
 $("scope").innerHTML=`<option value="*">${ROLE.type==="global"?"Alle clubs":"Al mijn clubs"}</option>`+ROLE.clubs.map(c=>`<option>${esc(c)}</option>`).join("");
