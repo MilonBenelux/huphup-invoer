@@ -8,7 +8,6 @@ const FIELD_DEFS = [
   { key: 'AM', label: 'Afspraken door Milo' },
   { key: 'P',  label: 'Presentaties gegeven' },
   { key: 'I',  label: 'Inschrijvingen' },
-  { key: 'IO', label: 'IO' },
   { key: 'R',  label: 'Gescoorde referenties' },
   { key: 'B',  label: 'Benfit' },
   { key: 'F',  label: 'Posts op sociale media' },
