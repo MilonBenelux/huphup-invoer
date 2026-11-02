@@ -24,8 +24,12 @@
 
   const shareIcon = '<svg width="16" height="18" viewBox="0 0 16 20" aria-hidden="true" style="vertical-align:-3px"><path d="M8 1v12M4 5l4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 8H2v11h12V8h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
   const steps = ios
-    ? `<li>Tik op <b>Deel</b> ${shareIcon} (in Safari onderaan, in Chrome naast de adresbalk).</li><li>Kies <b>Zet op beginscherm</b> en tik op <b>Voeg toe</b>.</li>`
-    : `<li>Tik rechtsboven op <b>\u22ee</b> (Samsung Internet: <b>\u2261</b> onderaan).</li><li>Kies <b>Toevoegen aan startscherm</b> en bevestig.</li>`;
+    ? (/CriOS/.test(ua)
+      // Chrome on iPhone/iPad
+      ? `<li>Tik op <b>Deel</b> ${shareIcon} naast de adresbalk.</li><li>Kies <b>Zet op beginscherm</b> en tik op <b>Voeg toe</b>.</li>`
+      // Safari (and other iOS browsers)
+      : `<li>Tik op <b>\u2022\u2022\u2022</b> naast de adresbalk en kies <b>Deel</b> ${shareIcon}.</li><li>Tik op <b>Toon meer</b> en kies <b>Zet op beginscherm</b>.</li><li>Tik op <b>Voeg toe</b>.</li>`)
+    : `<li>Tik rechtsboven op <b>\u22ee</b> (Samsung Internet: <b>\u2261</b> onderaan).</li><li>Kies <b>Installeren en snelkoppeling maken</b> en daarna <b>Snelle link maken</b>.</li><li>Zie je dat niet? Kies dan <b>Toevoegen aan startscherm</b>.</li>`;
 
   const css = `
   #hupInstall{position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:50;max-width:520px;margin:0 auto;

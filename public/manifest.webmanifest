@@ -1,6 +1,6 @@
 {
-  "name": "HUPHUP invoer",
-  "short_name": "HUPHUP",
+  "name": "HUPHUP Rapport",
+  "short_name": "Rapport",
   "start_url": "/?bron=beginscherm",
   "display": "browser",
   "background_color": "#6a7dbc",
