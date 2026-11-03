@@ -112,6 +112,10 @@ tr.facts td{background:var(--purple-soft);text-align:left;white-space:normal;pad
 .fact b.w{font-family:var(--f-body);font-weight:700;font-size:inherit;color:var(--purple)}
 tr.sub .mini{font-size:11.5px;color:var(--grey);margin-top:1px}
 tr.sub .mini .fact{margin-right:9px} tr.sub .mini .fact b{font-size:13px}
+tr.reghead td{background:var(--white);color:var(--grey);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:12px 14px 4px 38px;text-align:left}
+tr.reg td.mt{color:#333}
+tr.week td{background:var(--purple-soft);color:var(--purple-dark);font-weight:800;font-size:13px;text-align:left;padding:9px 14px 7px 38px;border-top:3px solid var(--purple);border-bottom:0}
+tr.week td span{font-weight:600;color:var(--grey)}
 .kpi.r{background:#e8f8ef} .kpi.r .k{color:#1e9e5c}
 .dp{color:var(--grey);font-weight:500}
 .empty{padding:28px;text-align:center;color:var(--grey)}
@@ -284,14 +288,45 @@ function table(mainGroups,subOf,base,avgLabel,sortable=true,subArePeople=false,r
 /* ---------- reference rows over all clubs (for the bar scale) ---------- */
 
 /* ---------- views ---------- */
+// One club selected: its registrations one by one, newest first (date, then NM before VM), with the real numbers.
+const WD=["zo","ma","di","wo","do","vr","za"];
+function registrations(list){
+  if(!list.length) return `<tr class="sub"><td colspan="99">Niets ingevuld.</td></tr>`;
+  const o=MONTHS.find(x=>x.key===S.month);
+  const rows=list.slice().sort((a,b)=>b.day-a.day||(a.part===b.part?0:a.part==="NM"?-1:1)||a.user.localeCompare(b.user,"nl"));
+  // ISO week (Monday–Sunday): a header row each time a new week starts.
+  const dateOf=e=>new Date(o.y,o.m,e.day);
+  const isoWeek=d=>{const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const wd=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-wd);
+    const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y0)/864e5+1)/7)};
+  const short=d=>`${d.getDate()} ${MON[d.getMonth()].slice(0,3)}`;
+  let lastWeek=null;
+  return `<tr class="reghead"><td colspan="99">Registraties, nieuwste eerst (${rows.length})</td></tr>`+rows.map(e=>{
+    const a=agg([e]);
+    const d=dateOf(e), wk=isoWeek(d);
+    let sep="";
+    if(wk!==lastWeek){
+      lastWeek=wk;
+      const mon=new Date(d); mon.setDate(d.getDate()-((d.getDay()+6)%7)); const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+      const inWeek=rows.filter(x=>isoWeek(dateOf(x))===wk);
+      sep=`<tr class="week"><td colspan="99">Week ${wk} <span>· ${short(mon)} – ${short(sun)} · ${inWeek.length} registratie${inWeek.length===1?"":"s"}</span></td></tr>`;
+    }
+    const when=`${WD[new Date(o.y,o.m,e.day).getDay()]} ${e.day} ${MON[o.m].slice(0,3)} · ${e.part}`;
+    const cells=METRICS.map(m=>{const v=m.show(a);return `<td class="mt" title="${m.key} · ${m.label}${m.kind==="ratio"?": "+m.tip(a):""}">${v==null?"–":m.fmt(v)}</td>`}).join("");
+    return sep+`<tr class="sub reg"><td><b>${when}</b> · ${e.user}<div class="mini">${facts(a,false)}</div></td>${cells}</tr>`;
+  }).join("");
+}
 function viewClubs(){
   const list=ENTRIES.filter(e=>e.month===S.month&&inScope(e));
   const byClub=group(list,e=>e.club);
-  const groups=scopeClubs().map(c=>({id:"c:"+c,name:c,a:agg(byClub.get(c)||[]),list:byClub.get(c)||[]}));
-  const body=table(groups,g=>[...group(g.list,e=>e.user)].map(([u,l])=>({name:u,a:agg(l)})),agg(list),
+  const one=S.scope!=="*";
+  const groups=scopeClubs().map(c=>{const l=byClub.get(c)||[];
+    return one?{id:"c:"+c,name:c,a:agg(l),list:l,single:true,after:registrations(l)}:{id:"c:"+c,name:c,a:agg(l),list:l}});
+  const body=table(groups,g=>one?[]:[...group(g.list,e=>e.user)].map(([u,l])=>({name:u,a:agg(l)})),agg(list),
     `Gemiddelde · ${S.role.type==="global"&&S.scope==="*"?"alle clubs":S.scope==="*"?"al mijn clubs":S.scope}`,true,true,
     {main:REF.scales.club?.[S.month],sub:REF.scales.personclub?.[S.month]});
-  return {head:head("Club"),body,lead:`Hoe elke club scoort in ${mLabel(S.month)} t.o.v. het gemiddelde. Klap een club open om te zien hoe elke medewerker er scoort.`};
+  return {head:head("Club"),body,lead:one
+    ?`Hoe ${S.scope} scoort in ${mLabel(S.month)} t.o.v. het gemiddelde, met daaronder alle registraties, de nieuwste eerst.`
+    :`Hoe elke club scoort in ${mLabel(S.month)} t.o.v. het gemiddelde. Klap een club open om te zien hoe elke medewerker er scoort.`};
 }
 function viewUsers(){
   const list=ENTRIES.filter(e=>e.month===S.month&&inScope(e));
@@ -377,9 +412,11 @@ function fillScope(){
 }
 
 $("month").innerHTML=MONTHS.map(m=>`<option value="${m.key}">${mLabel(m.key)}</option>`).join("");
-$("month").onchange=e=>{S.month=e.target.value;S.open.clear();render()};
-$("scope").onchange=e=>{S.scope=e.target.value;S.open.clear();render()};
-$("tClubs").onclick=()=>{S.tab="clubs";S.open.clear();render()};
+// One club selected on "Per club": open it right away, so its registrations show.
+const resetOpen=()=>{S.open.clear(); if(S.tab==="clubs"&&S.scope!=="*") S.open.add("c:"+esc(S.scope))};
+$("month").onchange=e=>{S.month=e.target.value;resetOpen();render()};
+$("scope").onchange=e=>{S.scope=e.target.value;resetOpen();render()};
+$("tClubs").onclick=()=>{S.tab="clubs";resetOpen();render()};
 $("tUsers").onclick=()=>{S.tab="users";S.open.clear();render()};
 $("tMonths").onclick=()=>{S.tab="months";S.open.clear();render()};
 $("tbl").addEventListener("click",e=>{

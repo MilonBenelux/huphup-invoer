@@ -206,6 +206,9 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
   bVM.onclick = () => pick({ date: qPart ? qPart.date : qDateOnly, part: 'VM' });
   bNM.onclick = () => pick({ date: qPart ? qPart.date : qDateOnly, part: 'NM' });
   function say(kind, text) { msg.className = 'msg ' + kind; msg.textContent = text; }
+  // Same, but `html` may hold markup (line break, mail link); every value in it must go through esc().
+  function sayHtml(kind, html) { msg.className = 'msg ' + kind; msg.innerHTML = html; }
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   $('add').onclick = async () => {
     const vals = {};
@@ -232,7 +235,7 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
       clubOptions(qClub, club);
       const doneLabel = label(qPart);
       qPart = null; qDateOnly = null; syncQuick(); // nothing preselected: pick the next daypart yourself
-      if (saved.overlap?.length) say('warn', `✓ Opgeslagen: ${club} · ${doneLabel}. ${contactText(club, doneLabel, saved.overlap)}`);
+      if (saved.overlap?.length) sayHtml('warn', `✓ Opgeslagen: ${esc(club)} · ${esc(doneLabel)}. ${contactText(club, doneLabel, saved.overlap)}`);
       else { say('ok', `✓ Opgeslagen: ${club} · ${doneLabel}. Hup! Kies een dagdeel voor een volgende invoer.`); slide(); }
       msg.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     } catch (e) {
@@ -282,10 +285,13 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
   }
 
   // ---------- same club + daypart already filled in by someone else ----------
-  const names = list => { const n = list.map(o => o.name); return n.length > 1 ? n.slice(0, -1).join(', ') + ' en ' + n.at(-1) : n[0]; };
-  const withMail = list => list.map(o => o.email ? `${o.name} (${o.email})` : o.name);
+  // Returns HTML (escaped): who else entered this club + daypart, with a mail link to contact them.
+  const names = list => { const n = list.map(o => esc(o.name)); return n.length > 1 ? n.slice(0, -1).join(', ') + ' en ' + n.at(-1) : n[0]; };
+  const withMail = list => list.map(o => o.email
+    ? `${esc(o.name)} (<a href="mailto:${encodeURIComponent(o.email).replace(/%40/g, '@')}">${esc(o.email)}</a>)` : esc(o.name));
   function contactText(club, when, others) {
-    return `Let op: ${names(others)} heeft voor ${club} · ${when} ook al cijfers ingevuld. Neem contact op met ${withMail(others).join(' of ')} om te vragen de gegevens aan te passen, zodat er maar één correcte invoer overblijft.`;
+    return `Let op: ${names(others)} ${others.length > 1 ? 'hebben' : 'heeft'} voor ${esc(club)} · ${esc(when)} ook al cijfers ingevuld.<br>` +
+      `Indien dit niet correct is, neem dan contact op met ${withMail(others).join(' of ')} om te vragen de gegevens aan te passen, zodat er maar één correcte invoer overblijft.`;
   }
   // Shows the "are you sure?" box and resolves to true (save anyway) or false (cancel).
   function askOverlap(club, part, others) {
@@ -317,7 +323,7 @@ setTimeout(() => document.getElementById('slides')?.classList.add('out'), 4000);
         saved = await api('PUT', '/api/entries/' + r.id, { ...body, confirmOverlap: true });
       }
       rows[i] = saved;
-      if (saved.overlap?.length) say('warn', `Rij opgeslagen. ${contactText(saved.club, label(saved), saved.overlap)}`);
+      if (saved.overlap?.length) sayHtml('warn', `Rij opgeslagen. ${contactText(saved.club, label(saved), saved.overlap)}`);
       else say('ok', `Rij ${i + 1} opgeslagen.`);
     } catch (e) { say('err', `Rij ${i + 1}: ${e.message}`); }
     sortRows(); render(); syncQuick();
