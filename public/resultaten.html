@@ -318,15 +318,16 @@ function registrations(list){
 function viewClubs(){
   const list=ENTRIES.filter(e=>e.month===S.month&&inScope(e));
   const byClub=group(list,e=>e.club);
-  const one=S.scope!=="*";
-  const groups=scopeClubs().map(c=>{const l=byClub.get(c)||[];
-    return one?{id:"c:"+c,name:c,a:agg(l),list:l,single:true,after:registrations(l)}:{id:"c:"+c,name:c,a:agg(l),list:l}});
-  const body=table(groups,g=>one?[]:[...group(g.list,e=>e.user)].map(([u,l])=>({name:u,a:agg(l)})),agg(list),
-    `Gemiddelde · ${S.role.type==="global"&&S.scope==="*"?"alle clubs":S.scope==="*"?"al mijn clubs":S.scope}`,true,true,
+  const clubsShown=scopeClubs(), one=clubsShown.length===1;
+  // Opening a club shows its registrations (newest first, per week) instead of a breakdown per coach.
+  const groups=clubsShown.map(c=>{const l=byClub.get(c)||[];
+    return {id:"c:"+c,name:c,a:agg(l),list:l,single:true,after:S.open.has("c:"+c)?registrations(l):""}});
+  const body=table(groups,g=>[],agg(list),
+    one?`Registraties · ${clubsShown[0]}`:`Gemiddelde · ${S.role.type==="global"&&S.scope==="*"?"alle clubs":"al mijn clubs"}`,true,true,
     {main:REF.scales.club?.[S.month],sub:REF.scales.personclub?.[S.month]});
   return {head:head("Club"),body,lead:one
-    ?`Hoe ${S.scope} scoort in ${mLabel(S.month)} t.o.v. het gemiddelde, met daaronder alle registraties, de nieuwste eerst.`
-    :`Hoe elke club scoort in ${mLabel(S.month)} t.o.v. het gemiddelde. Klap een club open om te zien hoe elke medewerker er scoort.`};
+    ?`Hoe ${clubsShown[0]} scoort in ${mLabel(S.month)} t.o.v. alle clubs, met daaronder alle registraties, de nieuwste eerst.`
+    :`Hoe elke club scoort in ${mLabel(S.month)} t.o.v. het gemiddelde. Klap een club open voor alle registraties, de nieuwste eerst.`};
 }
 function viewUsers(){
   const list=ENTRIES.filter(e=>e.month===S.month&&inScope(e));
@@ -413,7 +414,7 @@ function fillScope(){
 
 $("month").innerHTML=MONTHS.map(m=>`<option value="${m.key}">${mLabel(m.key)}</option>`).join("");
 // One club selected on "Per club": open it right away, so its registrations show.
-const resetOpen=()=>{S.open.clear(); if(S.tab==="clubs"&&S.scope!=="*") S.open.add("c:"+esc(S.scope))};
+const resetOpen=()=>{S.open.clear(); const c=scopeClubs(); if(S.tab==="clubs"&&c.length===1) S.open.add("c:"+(S.scope==="*"?c[0]:esc(S.scope)))};
 $("month").onchange=e=>{S.month=e.target.value;resetOpen();render()};
 $("scope").onchange=e=>{S.scope=e.target.value;resetOpen();render()};
 $("tClubs").onclick=()=>{S.tab="clubs";resetOpen();render()};
@@ -425,7 +426,7 @@ $("tbl").addEventListener("click",e=>{
   const tr=e.target.closest("tr[data-open]"); if(!tr)return;
   const id=tr.dataset.open; S.open.has(id)?S.open.delete(id):S.open.add(id); render();
 });
-fillScope(); render();
+fillScope(); resetOpen(); render();
 
 }
 
