@@ -287,7 +287,7 @@ function render(){
 
 /* ---------- controls ---------- */
 $("who").textContent=ROLE.name;
-$("sub").textContent="Uit Control+, Dataverse en Net2";
+$("sub").textContent="Uit Control+, MilonCare en Net2";
 { // last refresh per source (all daily at 05:30)
   const u=D.updated&&typeof D.updated==="object"?D.updated:{control_plus:D.updated};
   const when=v=>{if(!v)return "–";const d=new Date(v);return isNaN(d)?"–":d.toLocaleString("nl-BE",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})};
