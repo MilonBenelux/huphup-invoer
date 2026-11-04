@@ -68,6 +68,9 @@ th.sep,td.sep{border-left:2px solid var(--line);padding-left:12px}
 thead th.sep{border-left-color:rgba(255,255,255,.45)}
 .ct{font-size:.72em;opacity:.75}
 .kpi .v small{font-size:15px;font-weight:700}
+/* links to Control+ in the tiles: look like plain text, only show on hover */
+a.cl{color:inherit;text-decoration:none;cursor:pointer;border-radius:4px;transition:background .15s}
+a.cl:hover,a.cl:focus-visible{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px;background:rgba(0,0,0,.05)}
 .dbar{position:relative;display:inline-block;vertical-align:middle;width:46px;height:8px;background:var(--line);border-radius:5px;margin-right:8px;overflow:hidden}
 .dbar::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--grey);opacity:.5}
 .dbar span{position:absolute;top:0;bottom:0}
@@ -225,12 +228,26 @@ function sortRows(list,nameOf){
   return list.sort((a,b)=>{ if(col==="name") return dir*nameOf(a).localeCompare(nameOf(b),"nl");
     const x=a[col]??-Infinity,y=b[col]??-Infinity; return dir*(x-y); });
 }
+// Control+ pages for one club: starters / stoppers of that month, and the START-STOP overview.
+const CPLUS="https://huphup.opencontrolplus.com/productivity";
+function cplusLinks(month){
+  const clubs=scopeClubs(); if(clubs.length!==1) return null;           // links are per club
+  const r=D.rows.find(x=>x.club===clubs[0]&&x.outlet_id)||null; if(!r) return null;
+  const [y,m]=month.split("-").map(Number), o=r.outlet_id;
+  const q=`day=0&membership_status=1&month=${m}&outlet=${o}&outlet_id=2917&staff=0&year=${y}`;
+  const growth=(D.rows.find(x=>x.club===clubs[0]&&x.month===month)||r).cplus_url
+    ||`${CPLUS}?outlet=${o}&category=members_start_stop_block&staff=0&year=${y}&month=0&day=0&commit=&comparison_mode=0&membership_status=1`;
+  return {started:`${CPLUS}/started_members?${q}`,stopped:`${CPLUS}/stopped_members?${q}`,growth};
+}
+// wraps html in a link to Control+ (new tab) when there is one; otherwise returns it unchanged
+const cl=(href,html,title)=>href?`<a class="cl" href="${esc(href)}" target="_blank" rel="noopener" title="${title} · opent Control+">${html}</a>`:html;
 function kpis(t,month){
+  const L=cplusLinks(month)||{};
   const delta=revDelta(t);
   const perSporter=t.visits!=null&&t.unique_visitors?t.visits/t.unique_visitors:null;
   $("kpis").innerHTML=[
     `<div class="kpi"><div class="k">Klant-totaal</div><div class="v">${int(t.end)}</div><div class="d">begin ${int(t.start)}</div></div>`,
-    `<div class="kpi g"><div class="k">Groei</div><div class="v">${signed(t.growth)} <small>${t.growth_pct==null?"":signed(t.growth_pct,"%")}</small></div><div class="d">ingeschreven ${int(t.new)} · geheractiveerd ${int(t.renewed)} · uitgeschreven ${int(t.stopped)}</div></div>`,
+    `<div class="kpi g"><div class="k">Groei</div><div class="v">${cl(L.growth,`${signed(t.growth)} <small>${t.growth_pct==null?"":signed(t.growth_pct,"%")}</small>`,"Member START-STOP")}</div><div class="d">${cl(L.started,`ingeschreven ${int(t.new)}`,"Ingeschreven leden")} · geheractiveerd ${int(t.renewed)} · ${cl(L.stopped,`uitgeschreven ${int(t.stopped)}`,"Uitgeschreven leden")}</div></div>`,
     `<div class="kpi o"><div class="k">Omzet</div><div class="v">${eurH(t.revenue)}</div><div class="d">${delta?`${delta} t.o.v. vorige maand${month===MONTHS[0].key?" (lopende maand)":""}`:""}${t.revenue!=null&&t.end?` · ${eurH(t.revenue/t.end)} per klant`:""}</div></div>`,
     `<div class="kpi"><div class="k">Trainingen</div><div class="v">${int(t.visits)}</div><div class="d">unieke sporters ${int(t.unique_visitors)} · ${dec1(perSporter)} per sporter · actief ${t.active_pct==null?"–":t.active_pct+"%"}</div></div>`,
     `<div class="kpi p"><div class="k">Onbemande trainingen</div><div class="v">${int(t.net2_visits)}</div><div class="d">onbemande sporters ${int(t.net2_unique)}</div></div>`].join("");

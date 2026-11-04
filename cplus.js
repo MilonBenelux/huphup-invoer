@@ -89,6 +89,8 @@ function shape(data, clubNames) {
     if (!club) continue; // Control+ club that isn't in the form's club list
     if (r.error) { rows.push({ month: r.month, club, error: r.error }); continue; }
     rows.push({ month: r.month, club, methods: r.revenue_methods || {},
+      outlet_id: r.outlet_id ?? null,   // Control+ outlet of this club (for the links on the KPI page)
+      cplus_url: r.cplus_url ?? null,   // Control+ "Member START-STOP" page of this club and year
       excluded: r.revenue_excluded || {}, // e.g. Korting, Reeds geboekt: not part of the revenue
       ...Object.fromEntries([...FIELDS.map(f => f.key), ...EXTRA].map(k => [k, r[k] ?? null])),
       active_pct: activePct(r.unique_visitors, r.end) });
