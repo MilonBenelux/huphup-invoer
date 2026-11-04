@@ -124,7 +124,7 @@ tr.up-tip .tip .box{top:auto;bottom:calc(100% + 6px)}
   <div class="krow" id="kpis"></div>
   <div class="scroll"><table id="tbl"><thead></thead><tbody></tbody></table></div>
   <p class="note">Bron: Control+ (retentierapport en kassa detail), Dataverse (trainingen) en Net2 (onbemande trainingen), elke dag om 5.30 u bijgewerkt.
-    Klanten begin / Klant-totaal = geldige leden op de eerste / laatste dag van de maand; groei = ingeschreven + geheractiveerd − uitgeschreven
+    Klanten begin / Klant-totaal = geldige leden op de eerste / laatste dag van de maand; groei = ingeschreven − uitgeschreven
     (beweeg over de groei voor de opsplitsing); groei % = groei ÷ klanten begin.
     Omzet = "Totaal in periode" per betaalmethode, zonder kortingen en dergelijke — beweeg over een bedrag voor de betaalmethodes, de omzet per klant en de vergelijking met de vorige maand.
     Trainingen: meerdere bezoeken van één klant op één dag tellen één keer; actief % = unieke sporters ÷ klant-totaal.
@@ -184,7 +184,7 @@ function cell(k,r){
     const w=Math.min(50,50*Math.abs(v)/GMAX);
     const bar=`<span class="dbar"><span class="${v>=0?"pos":"neg"}" style="${v>=0?"left":"right"}:50%;width:${w}%"></span></span>`;
     const box=`<span class="box"><div><span>Ingeschreven</span><span>${signed(r.new)}</span></div>`
-      +`<div><span>Geheractiveerd</span><span>${signed(r.renewed)}</span></div>`
+      +(r.renewed==null?"":`<div><span>Geheractiveerd</span><span>${signed(r.renewed)}</span></div>`)  // not in the Dataverse source
       +`<div><span>Uitgeschreven</span><span>${r.stopped==null?"–":signed(-r.stopped)}</span></div>`
       +`<div class="t"><span>Netto groei</span><span>${signed(v)}</span></div></span>`;
     return `<span class="tip" tabindex="0">${bar}${signed(v)}${box}</span>`;
@@ -228,16 +228,12 @@ function sortRows(list,nameOf){
   return list.sort((a,b)=>{ if(col==="name") return dir*nameOf(a).localeCompare(nameOf(b),"nl");
     const x=a[col]??-Infinity,y=b[col]??-Infinity; return dir*(x-y); });
 }
-// Control+ pages for one club: starters / stoppers of that month, and the START-STOP overview.
-const CPLUS="https://huphup.opencontrolplus.com/productivity";
+// Control+ pages behind the growth tile, for one club and the shown month. The links come from the
+// cplus-report service (config.yaml → cplus_links: growth, new, stopped), so they are maintained there.
 function cplusLinks(month){
   const clubs=scopeClubs(); if(clubs.length!==1) return null;           // links are per club
-  const r=D.rows.find(x=>x.club===clubs[0]&&x.outlet_id)||null; if(!r) return null;
-  const [y,m]=month.split("-").map(Number), o=r.outlet_id;
-  const q=`day=0&membership_status=1&month=${m}&outlet=${o}&outlet_id=2917&staff=0&year=${y}`;
-  const growth=(D.rows.find(x=>x.club===clubs[0]&&x.month===month)||r).cplus_url
-    ||`${CPLUS}?outlet=${o}&category=members_start_stop_block&staff=0&year=${y}&month=0&day=0&commit=&comparison_mode=0&membership_status=1`;
-  return {started:`${CPLUS}/started_members?${q}`,stopped:`${CPLUS}/stopped_members?${q}`,growth};
+  const u=(D.rows.find(x=>x.club===clubs[0]&&x.month===month)||{}).cplus_urls||{};
+  return {growth:u.growth,started:u.new,stopped:u.stopped};
 }
 // wraps html in a link to Control+ (new tab) when there is one; otherwise returns it unchanged
 const cl=(href,html,title)=>href?`<a class="cl" href="${esc(href)}" target="_blank" rel="noopener" title="${title} · opent Control+">${html}</a>`:html;
@@ -247,7 +243,7 @@ function kpis(t,month){
   const perSporter=t.visits!=null&&t.unique_visitors?t.visits/t.unique_visitors:null;
   $("kpis").innerHTML=[
     `<div class="kpi"><div class="k">Klant-totaal</div><div class="v">${int(t.end)}</div><div class="d">begin ${int(t.start)}</div></div>`,
-    `<div class="kpi g"><div class="k">Groei</div><div class="v">${cl(L.growth,`${signed(t.growth)} <small>${t.growth_pct==null?"":signed(t.growth_pct,"%")}</small>`,"Member START-STOP")}</div><div class="d">${cl(L.started,`ingeschreven ${int(t.new)}`,"Ingeschreven leden")} · geheractiveerd ${int(t.renewed)} · ${cl(L.stopped,`uitgeschreven ${int(t.stopped)}`,"Uitgeschreven leden")}</div></div>`,
+    `<div class="kpi g"><div class="k">Groei</div><div class="v">${cl(L.growth,`${signed(t.growth)} <small>${t.growth_pct==null?"":signed(t.growth_pct,"%")}</small>`,"Member START-STOP")}</div><div class="d">${cl(L.started,`ingeschreven ${int(t.new)}`,"Ingeschreven leden")} ${t.renewed==null?"":` · geheractiveerd ${int(t.renewed)}`} · ${cl(L.stopped,`uitgeschreven ${int(t.stopped)}`,"Uitgeschreven leden")}</div></div>`,
     `<div class="kpi o"><div class="k">Omzet</div><div class="v">${eurH(t.revenue)}</div><div class="d">${delta?`${delta} t.o.v. vorige maand${month===MONTHS[0].key?" (lopende maand)":""}`:""}${t.revenue!=null&&t.end?` · ${eurH(t.revenue/t.end)} per klant`:""}</div></div>`,
     `<div class="kpi"><div class="k">Trainingen</div><div class="v">${int(t.visits)}</div><div class="d">unieke sporters ${int(t.unique_visitors)} · ${dec1(perSporter)} per sporter · actief ${t.active_pct==null?"–":t.active_pct+"%"}</div></div>`,
     `<div class="kpi p"><div class="k">Onbemande trainingen</div><div class="v">${int(t.net2_visits)}</div><div class="d">onbemande sporters ${int(t.net2_unique)}</div></div>`].join("");
